@@ -1,0 +1,10 @@
+venv/
+.vscode/
+img/
+
+
+.DS_Store
+*.db*
+*.log
+temp_page.html
+ftp_config.yaml
