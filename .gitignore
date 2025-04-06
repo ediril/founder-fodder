@@ -1,6 +1,7 @@
 venv/
 .vscode/
 img/
+_originals/
 content/
 vendor/
 
