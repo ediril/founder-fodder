@@ -7,53 +7,43 @@ import time
 import json
 from urllib.parse import urlparse
 import argparse
+import html
+
+OLLAMA_MODEL = "gemma3:1b" #"llama3.2:3b" #"gemma3:4b"
+OLLAMA_TIMEOUT = 180
+
+# Prompts for Ollama
+STORY_PROMPT = "Summarize the following page based on main topic and insights. Try to keep the summary short without leaving out key information. Return just the summary:\n------\n{content}"
+COMMENTS_PROMPT = "Summarize the following discussion with comments indented to show groupings. Include key arguments, opinions and insights. Return just the summary:\n------\n{content}"
+
+STORY_SUMMARY_FILE = "story-summary.md"
+COMMENTS_SUMMARY_FILE = "comments-summary.md"
 
 class StorySummarizer:
     """Downloads story content and comments from Hacker News, summarizes them with Ollama LLM"""
     
-    def __init__(self, db_path="hn_stories.db", output_dir="summaries"):
+    # API Endpoints
+    BASE_URL = "https://hacker-news.firebaseio.com/v0"
+    ITEM_URL = f"{BASE_URL}/item"
+    
+    def __init__(self, db_path="hn_stories.db", output_dir="static/content", originals_dir="static/_originals"):
         """Initialize with database path and output directory"""
         self.db_path = db_path
         self.output_dir = output_dir
+        self.originals_dir = originals_dir
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         })
-        
-        # Create output directory if it doesn't exist
+
+        os.makedirs(self.originals_dir, exist_ok=True)
         os.makedirs(self.output_dir, exist_ok=True)
-        
-        # Create subdirectories for story and comment summaries
-        self.story_dir = os.path.join(self.output_dir, "stories")
-        self.comment_dir = os.path.join(self.output_dir, "comments")
-        os.makedirs(self.story_dir, exist_ok=True)
-        os.makedirs(self.comment_dir, exist_ok=True)
     
-    def get_unsummarized_stories(self, story_type="top", limit=10):
-        """Get stories that haven't been summarized yet"""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
-            
-            cursor.execute('''
-                SELECT id, title, url, domain, comments_url
-                FROM stories
-                WHERE type = ?
-                ORDER BY ranking
-                LIMIT ?
-            ''', (story_type, limit))
-            
-            stories = []
-            for row in cursor.fetchall():
-                story_id = row['id']
-                story_summary_path = os.path.join(self.story_dir, f"{story_id}.txt")
-                comment_summary_path = os.path.join(self.comment_dir, f"{story_id}.txt")
-                
-                # Only include stories that haven't been summarized
-                if not os.path.exists(story_summary_path) or not os.path.exists(comment_summary_path):
-                    stories.append(dict(row))
-            
-            return stories
+    def decode_html_entities(self, text):
+        """Decode HTML entities in text to their corresponding characters"""
+        if not text:
+            return text
+        return html.unescape(text)
     
     def fetch_story_content(self, url):
         """Fetch and extract main content from a story URL"""
@@ -75,177 +65,342 @@ class StorySummarizer:
             # Try to find the main content
             main_content = ""
             
-            # 1. Try to find article tag or main content div
+            # Try to find article tag or main content div
             article = soup.find('article') or soup.find('main') or soup.find(id='content') or soup.find(class_='content')
             if article:
                 main_content = article.get_text(separator='\n', strip=True)
+            else:
+                if soup.body:
+                    main_content = soup.body.get_text(separator='\n', strip=True)
             
-            # 2. If no specific content container, just get body text
-            if not main_content:
-                main_content = soup.body.get_text(separator='\n', strip=True)
-            
-            # 3. Clean up the content (remove excessive newlines, etc.)
+            # Clean up the content (remove excessive newlines, etc.)
             main_content = '\n'.join(line.strip() for line in main_content.splitlines() if line.strip())
             
-            # 4. If content is too long, truncate it
-            if len(main_content) > 15000:
-                main_content = main_content[:15000] + "...\n[Content truncated due to length]"
+            # Decode HTML entities
+            main_content = self.decode_html_entities(main_content)
+
+            if not main_content:
+                print(" .. could not find any story content for")
             
             return main_content
         except Exception as e:
             return f"Error fetching content: {str(e)}"
     
-    def fetch_comments(self, comments_url):
-        """Fetch and extract comments from a HN discussion URL"""
+    def fetch_comment(self, comment_id):
+        """Fetch a single comment by ID from the Hacker News API"""
         try:
-            response = self.session.get(comments_url, timeout=10)
+            response = self.session.get(f"{self.ITEM_URL}/{comment_id}.json", timeout=10)
             if not response.ok:
-                return f"Failed to fetch comments: HTTP {response.status_code}"
+                return None
             
-            soup = BeautifulSoup(response.text, 'html.parser')
+            comment = response.json()
+            if not comment or comment.get('dead') or comment.get('deleted'):
+                return None
             
-            # On HN, comments are in a table with class 'comment-tree'
-            comment_section = soup.find('table', class_='comment-tree')
-            if not comment_section:
-                return "No comments found or unable to parse comment section."
+            # Decode HTML entities in the comment text
+            if 'text' in comment:
+                comment['text'] = self.decode_html_entities(comment['text'])
             
-            # Extract comments - on HN they're typically in tags with class 'commtext'
-            comments = comment_section.find_all(class_='commtext')
-            
-            combined_comments = ""
-            for i, comment in enumerate(comments[:20]):  # Limit to 20 comments
-                comment_text = comment.get_text(strip=True)
-                combined_comments += f"Comment {i+1}:\n{comment_text}\n\n"
-            
-            if not combined_comments:
-                return "No comments found."
-            
-            # Truncate if too long
-            if len(combined_comments) > 15000:
-                combined_comments = combined_comments[:15000] + "...\n[Comments truncated due to length]"
-            
-            return combined_comments
+            return comment
         except Exception as e:
-            return f"Error fetching comments: {str(e)}"
+            print(f"Error fetching comment {comment_id}: {str(e)}")
+            return None
     
-    def summarize_with_ollama(self, content, prompt_type):
+    def fetch_comments_recursive(self, comment_ids, depth=0, max_depth=5):
+        """Recursively fetch comments and their replies"""
+        if not comment_ids or depth > max_depth:
+            return []
+        
+        comments = []
+        for comment_id in comment_ids:
+            comment = self.fetch_comment(comment_id)
+            if not comment:
+                continue
+            
+            # Extract the comment text
+            comment_text = comment.get('text', '')
+            if not comment_text:
+                continue
+            
+            # Create a comment object with text and replies
+            comment_obj = {
+                'id': comment_id,
+                'text': comment_text,
+                'by': comment.get('by', ''),
+                'time': comment.get('time', 0),
+                'replies': []
+            }
+            
+            # Recursively fetch replies if any
+            if 'kids' in comment and comment['kids']:
+                replies = self.fetch_comments_recursive(comment['kids'], depth + 1, max_depth)
+                comment_obj['replies'] = replies
+            
+            comments.append(comment_obj)
+            
+            # Small delay to be nice to the API
+            time.sleep(0.1)
+        
+        return comments
+    
+    def fetch_comments(self, comments_url):
+        """Fetch and extract comments from a HN discussion URL using the API"""
+        # Extract the story ID from the comments URL
+        # Format is typically: https://news.ycombinator.com/item?id=123456
+        parsed_url = urlparse(comments_url)
+        query_params = dict(param.split('=') for param in parsed_url.query.split('&') if '=' in param)
+        story_id = query_params.get('id')
+        
+        if not story_id:
+            return "Could not extract story ID from comments URL."
+        
+        # Fetch the story details to get the top-level comment IDs
+        response = self.session.get(f"{self.ITEM_URL}/{story_id}.json", timeout=10)
+        if not response.ok:
+            return f"Failed to fetch story details: HTTP {response.status_code}"
+        
+        story = response.json()
+        if not story or 'kids' not in story:
+            return "No comments found for this story."
+        
+        # Fetch all comments recursively
+        print(f"  Fetching comments for story {story_id}...")
+        comments = self.fetch_comments_recursive(story['kids'])
+        
+        # Format comments for summarization
+        combined_comments = ""
+        for i, comment in enumerate(comments):
+            combined_comments += self.format_comment(comment, i+1)
+        
+        if not combined_comments:
+            return ""
+        
+        # Ensure all HTML entities are decoded
+        combined_comments = self.decode_html_entities(combined_comments)
+        
+        return combined_comments
+    
+    def remove_heading(self, body):
+        """Remove lines that begin with 'Comment' (with possible leading whitespace)"""
+        if not body:
+            return body
+            
+        # Split the text into lines
+        lines = body.split('\n')
+        
+        cleaned_lines = []
+        for line in lines:
+            lline = line.strip().lower()
+
+            if lline.startswith('summary '):
+                continue
+            if "you like me to" in lline or "you want me to" in lline:
+                break
+            
+            cleaned_lines.append(line)
+        
+        # Join the lines back together
+        return '\n'.join(cleaned_lines)
+    
+    def format_comment(self, comment, index, depth=0):
+        """Format a comment and its replies for summarization"""
+        indent = "  " * depth
+        result = f"{indent}Comment {index}:\n{indent}{comment['text']}\n\n"
+        
+        # Add replies
+        for i, reply in enumerate(comment.get('replies', [])):
+            result += self.format_comment(reply, f"{index}.{i+1}", depth + 1)
+        
+        return result
+    
+    def summarize(self, content, prompt_type):
         """Use Ollama to summarize content"""
         try:
             # Define prompts based on content type
             if prompt_type == "story":
-                prompt = f"Summarize the following article in 2-3 paragraphs, highlighting the key points and insights:\n\n{content}"
+                prompt = STORY_PROMPT.format(content=content)
             else:  # comments
-                prompt = f"Summarize the following discussion comments in 2-3 paragraphs, highlighting the main opinions, insights, and helpful information:\n\n{content}"
+                prompt = COMMENTS_PROMPT.format(content=content)
             
             # Make request to Ollama API
             response = requests.post(
                 "http://localhost:11434/api/generate",
                 json={
-                    "model": "llama3", # Adjust model name as needed
+                    "model": OLLAMA_MODEL,
                     "prompt": prompt,
                     "stream": False
                 },
-                timeout=60
+                timeout=OLLAMA_TIMEOUT
             )
             
             if response.status_code == 200:
                 result = response.json()
                 return result.get("response", "No summary generated")
             else:
-                return f"Failed to get summary: HTTP {response.status_code}"
+                error_msg = f"ERROR: Failed to get summary: HTTP {response.status_code}"
+                print(error_msg)
+                return error_msg
+        except requests.exceptions.ConnectionError:
+            error_msg = "ERROR: Could not connect to Ollama. Is it running?"
+            print(error_msg)
+            return error_msg
+        except requests.exceptions.Timeout:
+            error_msg = f"ERROR: Ollama request timed out after {OLLAMA_TIMEOUT} seconds"
+            print(error_msg)
+            return error_msg
+        except json.JSONDecodeError:
+            error_msg = "ERROR: Invalid JSON response from Ollama"
+            print(error_msg)
+            return error_msg
         except Exception as e:
-            return f"Error generating summary: {str(e)}"
+            error_msg = f"ERROR: Unexpected error during summarization: {str(e)}"
+            print(error_msg)
+            return error_msg
     
-    def process_story(self, story):
-        """Process a single story - fetch content, summarize, and save"""
-        story_id = story['id']
-        print(f"Processing story {story_id}: {story['title']}")
+    def process_story(self, story, download_only=False):
+        """Process a single story: download content, summarize if needed"""
+        print(f"Processing story {story['id']}")
         
-        # Paths for summary files
-        story_summary_path = os.path.join(self.story_dir, f"{story_id}.txt")
-        comment_summary_path = os.path.join(self.comment_dir, f"{story_id}.txt")
+        # Create output directory if it doesn't exist
+        os.makedirs(self.output_dir, exist_ok=True)
         
-        # Process story content if needed
-        if not os.path.exists(story_summary_path) and story['url']:
-            print(f"  Fetching content from {story['url']}")
-            content = self.fetch_story_content(story['url'])
+        # Download story content
+        story_content = ""
+        story_file = os.path.join(self.originals_dir, f"{story['id']}-story.txt")
+        if story['url'] and not os.path.exists(story_file):
+            print("Fetching story...")
+            story_content = self.fetch_story_content(story['url'])            
+            # Save original content
+            if story_content:
+                with open(story_file, 'w', encoding='utf-8') as f:
+                    f.write(story_content)
+                print("Saved story...")
+        
+        # Download comments
+        comments_content = ""
+        comments_file = os.path.join(self.originals_dir, f"{story['id']}-comments.txt")
+        if story['comments_url'] and not os.path.exists(comments_file):
+            print("Fetching comments...")
+            comments_content = self.fetch_comments(story['comments_url'])
+            if comments_content:
+                with open(comments_file, 'w', encoding='utf-8') as f:
+                    f.write(comments_content)
+                print("Comments saved...")
+
+        if download_only:
+            print(f"  Download-only mode: skipping summarization for story {story['id']}")
+            return
+        
+        # Summarize story content if we have it
+        if not story_content and os.path.exists(story_file):
+            with open(story_file, 'r', encoding='utf-8') as f:
+                story_content = f.read()
+            print("Loaded existing story content...")
+
+        summary_file = os.path.join(self.output_dir, f"{story['id']}-{STORY_SUMMARY_FILE}")
+        if story_content and not os.path.exists(summary_file):
+            print("  Summarizing story content...")
+            start_time = time.time()
+            story_summary = self.summarize(story_content, "story")
+
+            # Save the story summary
+            story_summary = self.remove_heading(story_summary)
+
+            with open(summary_file, 'w', encoding='utf-8') as f:
+                f.write(story_summary)
+            print(f"  Saved story summary to {summary_file}")
             
-            if len(content) > 200:  # Only summarize if we have substantial content
-                print("  Summarizing content with Ollama...")
-                summary = self.summarize_with_ollama(content, "story")
-                
-                # Save the summary
-                with open(story_summary_path, 'w', encoding='utf-8') as f:
-                    f.write(f"Title: {story['title']}\n")
-                    f.write(f"URL: {story['url']}\n\n")
-                    f.write(summary)
-                
-                print(f"  Saved story summary to {story_summary_path}")
-            else:
-                print("  Not enough content to summarize")
-                # Save the minimal content
-                with open(story_summary_path, 'w', encoding='utf-8') as f:
-                    f.write(f"Title: {story['title']}\n")
-                    f.write(f"URL: {story['url']}\n\n")
-                    f.write("Insufficient content to summarize.")
+            # Calculate and display elapsed time
+            elapsed_time = time.time() - start_time
+            print(f"  Story {story['id']} summarized in {elapsed_time:.2f} sec")
         
-        # Process comments if needed
-        if not os.path.exists(comment_summary_path) and story['comments_url']:
-            print(f"  Fetching comments from {story['comments_url']}")
-            comments = self.fetch_comments(story['comments_url'])
-            
-            if len(comments) > 200:  # Only summarize if we have substantial comments
-                print("  Summarizing comments with Ollama...")
-                summary = self.summarize_with_ollama(comments, "comments")
-                
-                # Save the summary
-                with open(comment_summary_path, 'w', encoding='utf-8') as f:
-                    f.write(f"Title: {story['title']}\n")
-                    f.write(f"Comments URL: {story['comments_url']}\n\n")
-                    f.write(summary)
-                
-                print(f"  Saved comment summary to {comment_summary_path}")
-            else:
-                print("  Not enough comments to summarize")
-                # Save the minimal content
-                with open(comment_summary_path, 'w', encoding='utf-8') as f:
-                    f.write(f"Title: {story['title']}\n")
-                    f.write(f"Comments URL: {story['comments_url']}\n\n")
-                    f.write("Insufficient comments to summarize.")
+        # Generate comments summary if needed and we have comments
+        if not comments_content and os.path.exists(comments_file):
+            # Load existing comments content
+            with open(comments_file, 'r', encoding='utf-8') as f:
+                comments_content = f.read()
+            print("Loaded existing comments content...")
         
+        if comments_content and len(comments_content) > 1000:
+            comments_summary_file = os.path.join(self.output_dir, f"{story['id']}-{COMMENTS_SUMMARY_FILE}")
+            if not os.path.exists(comments_summary_file):
+                print("  Summarizing comments...")
+                start_time = time.time()
+                comments_summary = self.summarize(comments_content, "comments")
+                
+                # Save the comments summary
+                comments_summary = self.remove_heading(comments_summary)
+
+                with open(comments_summary_file, 'w', encoding='utf-8') as f:
+                    f.write(comments_summary)
+                print(f"  Saved comments summary to {comments_summary_file}")
+                
+                # Calculate and display elapsed time
+                elapsed_time = time.time() - start_time
+                print(f"  Comments {story['id']} summarized in {elapsed_time:.2f} sec")
+
         # Sleep to be nice to APIs and servers
         time.sleep(1)
     
-    def run(self, story_type="top", limit=10):
+    def run(self, story_type="top", limit=10, download_only=False):
         """Run the summarization process"""
-        print(f"Looking for {story_type} stories to summarize (limit: {limit})...")
-        stories = self.get_unsummarized_stories(story_type, limit)
-        
-        if not stories:
-            print("No new stories to summarize.")
-            return
-        
-        print(f"Found {len(stories)} stories to process.")
-        
-        for story in stories:
-            self.process_story(story)
-            print("-" * 40)
-        
-        print(f"Completed summarization of {len(stories)} stories.")
+        print(f"Looking for {story_type} stories to process (limit: {limit})...")
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT id, title, url, domain, comments_url
+                FROM stories
+                WHERE type = ?
+                ORDER BY ranking
+            ''', (story_type,))
+            
+            story_cnt = 0
+            for story in cursor.fetchall():
+                self.process_story(story, download_only)
+
+                story_cnt += 1
+                if limit > 0 and story_cnt == limit:
+                    break
+
+            print(f"Completed processing of {story_cnt} stories.")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Summarize Hacker News stories and comments')
     parser.add_argument('--type', choices=['top', 'new', 'best'], default='top',
                         help='Type of stories to summarize (default: top)')
-    parser.add_argument('--limit', type=int, default=10,
-                        help='Maximum number of stories to process (default: 10)')
+    parser.add_argument('--limit', type=int, default=-1,
+                        help='Maximum number of stories to process (default: _all_)')
     parser.add_argument('--db', default='hn_stories.db',
                         help='Path to SQLite database (default: hn_stories.db)')
-    parser.add_argument('--output', default='summaries',
-                        help='Output directory for summaries (default: summaries)')
+    parser.add_argument('--output', default='static/content',
+                        help='Output directory for content files (default: static/content)')
+    parser.add_argument('--download-only', action='store_true',
+                        help='Download story and comments content without summarizing')
+    parser.add_argument('--story-id', type=int,
+                        help='Process a single story by ID')
     
     args = parser.parse_args()
-    
+
     summarizer = StorySummarizer(db_path=args.db, output_dir=args.output)
-    summarizer.run(story_type=args.type, limit=args.limit)
+    
+    if args.story_id:
+        # Process a single story by ID
+        with sqlite3.connect(args.db) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT id, title, url, domain, comments_url
+                FROM stories
+                WHERE id = ?
+            ''', (args.story_id,))
+            story = cursor.fetchone()
+            
+            if story:
+                summarizer.process_story(story, args.download_only)
+            else:
+                print(f"Story ID {args.story_id} not found in database.")
+    else:
+        summarizer.run(story_type=args.type, limit=args.limit, download_only=args.download_only)
