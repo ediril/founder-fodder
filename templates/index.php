@@ -75,10 +75,15 @@
                                 <span class="icon"><i class="fa-regular fa-comment"></i></span>
                                 <span><?php echo (int)$story['comments_count']; ?></span>
                             </a>
-                            <a href="/summary/<?php echo htmlspecialchars($story['id']); ?>" class="button is-small" target="_blank">
-                                <span class="icon"><i class="fa-regular fa-file"></i></span>
+                            <?php 
+                            $summary_files = check_summary_files($story['id']);
+                            if ($summary_files['has_story_summary'] || $summary_files['has_comments_summary']): 
+                            ?>
+                            <a href="/summary/<?php echo htmlspecialchars($story['id']); ?>" class="button is-small">
+                                <span class="icon"><i class="fa-regular fa-file-lines"></i></span>
                                 <span>Summary</span>
                             </a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>

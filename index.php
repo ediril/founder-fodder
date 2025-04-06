@@ -235,6 +235,22 @@ function get_stats(): array {
     }
 }
 
+/**
+ * Check if summary files exist for a story
+ */
+function check_summary_files(string $story_id): array {
+    $story_summary_path = "static/content/{$story_id}-story-summary.md";
+    $comments_summary_path = "static/content/{$story_id}-comments-summary.md";
+    
+    $has_story_summary = file_exists($story_summary_path);
+    $has_comments_summary = file_exists($comments_summary_path);
+    
+    return [
+        'has_story_summary' => $has_story_summary,
+        'has_comments_summary' => $has_comments_summary
+    ];
+}
+
 // Debug function to log requests - remove in production
 function debugLog($message) {
     $logEnabled = false; // Set to true when debugging
@@ -274,6 +290,73 @@ if ($path === '/' || $path === '/index.php') {
     
     // Include the template with stories data
     include 'templates/index.php';
+} elseif (preg_match('/^\/summary\/(\d+)$/', $path, $matches)) {
+    // Handle combined summary page
+    $story_id = $matches[1];
+    
+    // Get story details from database
+    $db = new SQLite3('hn_stories.db');
+    $story = $db->querySingle("SELECT * FROM stories WHERE id = " . intval($story_id), true);
+    
+    if (!$story) {
+        http_response_code(404);
+        echo "Story not found";
+        exit;
+    }
+    
+    // Check if summary files exist
+    $story_summary_file = "static/content/{$story_id}-story-summary.md";
+    $comments_summary_file = "static/content/{$story_id}-comments-summary.md";
+    
+    $has_story_summary = file_exists($story_summary_file);
+    $has_comments_summary = file_exists($comments_summary_file);
+    
+    if (!$has_story_summary && !$has_comments_summary) {
+        http_response_code(404);
+        echo "No summaries found for this story";
+        exit;
+    }
+    
+    // Load summaries if they exist
+    $story_summary = '';
+    $comments_summary = '';
+    
+    if ($has_story_summary) {
+        $story_summary = file_get_contents($story_summary_file);
+    }
+    
+    if ($has_comments_summary) {
+        $comments_summary = file_get_contents($comments_summary_file);
+    }
+    
+    // Include the summary template
+    include 'templates/summary.php';
+} elseif (preg_match('/^\/story-summary\/(\d+)$/', $path, $matches)) {
+    // Handle story summary requests
+    $story_id = $matches[1];
+    $summary_file = "static/content/{$story_id}-story-summary.md";
+    
+    if (file_exists($summary_file)) {
+        // Set content type to markdown
+        header('Content-Type: text/markdown');
+        readfile($summary_file);
+    } else {
+        http_response_code(404);
+        echo "Story summary not found";
+    }
+} elseif (preg_match('/^\/comments-summary\/(\d+)$/', $path, $matches)) {
+    // Handle comments summary requests
+    $story_id = $matches[1];
+    $summary_file = "static/content/{$story_id}-comments-summary.md";
+    
+    if (file_exists($summary_file)) {
+        // Set content type to markdown
+        header('Content-Type: text/markdown');
+        readfile($summary_file);
+    } else {
+        http_response_code(404);
+        echo "Comments summary not found";
+    }
 } elseif ($path === '/api/stories') {
     // API endpoint for stories
     header('Content-Type: application/json');
