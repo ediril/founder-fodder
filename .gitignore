@@ -2,7 +2,7 @@ venv/
 .vscode/
 img/
 content/
-
+vendor/
 
 .DS_Store
 *.db*
