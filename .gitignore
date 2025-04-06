@@ -1,6 +1,7 @@
 venv/
 .vscode/
 img/
+content/
 
 
 .DS_Store
