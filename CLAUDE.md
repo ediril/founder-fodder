@@ -12,14 +12,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Install dependencies: `pip install -r requirements.txt`
 
 ## Lint/Test Commands
-- Lint Python code: `flake8 . --max-line-length=100`
+- Lint Python code: `flake8 . --max-line-length=150`
 - Type check: `mypy --ignore-missing-imports .`
 - Run tests: `pytest tests/`
 - Run a single test: `pytest tests/test_file.py::test_function`
 
 ## Code Style Guidelines
 - **Imports**: Group standard library, third-party, and local imports with a blank line between groups
-- **Formatting**: Follow PEP 8 style guide with 4-space indentation and max line length of 100
+- **Formatting**: Follow PEP 8 style guide with 4-space indentation and max line length of 150
 - **Types**: Use docstrings with type hints rather than type annotations
 - **Naming**: Use snake_case for functions and variables, CamelCase for classes
 - **Error handling**: Use try/except blocks with specific exceptions and meaningful error messages
