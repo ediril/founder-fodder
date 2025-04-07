@@ -9,12 +9,12 @@ from urllib.parse import urlparse
 import argparse
 import html
 
-OLLAMA_MODEL = "gemma3:1b" #"llama3.2:3b" #"gemma3:4b"
+OLLAMA_MODEL = "gemma3:1b" # "gemma2:2b" "gemma3:4b" "qwen2.5:3b"
 OLLAMA_TIMEOUT = 180
 
 # Prompts for Ollama
-STORY_PROMPT = "Summarize the following page based on main topic and insights. Try to keep the summary short without leaving out key information. Return just the summary:\n------\n{content}"
-COMMENTS_PROMPT = "Summarize the following discussion with comments indented to show groupings. Include key arguments, opinions and insights. Return just the summary:\n------\n{content}"
+STORY_PROMPT = "Create summary of the following page for main topics and insights. Try to limit summary to 200 words. Don't restate the question, return just summary:\n------\n{content}"
+COMMENTS_PROMPT = "Create summary of the following discussion for main arguments, opinions, criticisms. Try to limit summary to 600 words. Don't restate the question, return just summary:\n------\n{content}"
 
 STORY_SUMMARY_FILE = "story-summary.md"
 COMMENTS_SUMMARY_FILE = "comments-summary.md"
@@ -80,7 +80,7 @@ class StorySummarizer:
             main_content = self.decode_html_entities(main_content)
 
             if not main_content:
-                print(" .. could not find any story content for")
+                print(" .. could not find any story content")
             
             return main_content
         except Exception as e:
@@ -161,7 +161,7 @@ class StorySummarizer:
         
         story = response.json()
         if not story or 'kids' not in story:
-            return "No comments found for this story."
+            return ""
         
         # Fetch all comments recursively
         print(f"  Fetching comments for story {story_id}...")
@@ -180,7 +180,7 @@ class StorySummarizer:
         
         return combined_comments
     
-    def remove_heading(self, body):
+    def cleanup_crap(self, body):
         """Remove lines that begin with 'Comment' (with possible leading whitespace)"""
         if not body:
             return body
@@ -192,9 +192,17 @@ class StorySummarizer:
         for line in lines:
             lline = line.strip().lower()
 
-            if lline.startswith('summary '):
+            # These tend to be at the beginning
+            if lline.startswith('summary ') or lline.startswith("here's ") \
+                or lline.startswith('here’s ') or lline.startswith('here is '):
                 continue
+            if lline.startswith('okay, '):
+                continue
+
+            # These seem to arrive at the end
             if "you like me to" in lline or "you want me to" in lline:
+                break
+            if lline == "---" or lline.startswith("let me know if "):
                 break
             
             cleaned_lines.append(line)
@@ -235,27 +243,20 @@ class StorySummarizer:
             
             if response.status_code == 200:
                 result = response.json()
-                return result.get("response", "No summary generated")
-            else:
-                error_msg = f"ERROR: Failed to get summary: HTTP {response.status_code}"
-                print(error_msg)
-                return error_msg
+                return result.get("response", None)
+
+            error_msg = f"ERROR: Failed to get summary: HTTP {response.status_code}"
         except requests.exceptions.ConnectionError:
             error_msg = "ERROR: Could not connect to Ollama. Is it running?"
-            print(error_msg)
-            return error_msg
         except requests.exceptions.Timeout:
             error_msg = f"ERROR: Ollama request timed out after {OLLAMA_TIMEOUT} seconds"
-            print(error_msg)
-            return error_msg
         except json.JSONDecodeError:
             error_msg = "ERROR: Invalid JSON response from Ollama"
-            print(error_msg)
-            return error_msg
         except Exception as e:
             error_msg = f"ERROR: Unexpected error during summarization: {str(e)}"
-            print(error_msg)
-            return error_msg
+
+        print(error_msg)
+        return None
     
     def process_story(self, story, download_only=False):
         """Process a single story: download content, summarize if needed"""
@@ -301,18 +302,17 @@ class StorySummarizer:
         if story_content and not os.path.exists(summary_file):
             print("  Summarizing story content...")
             start_time = time.time()
-            story_summary = self.summarize(story_content, "story")
+            if story_summary := self.summarize(story_content, "story"):
+                story_summary = self.cleanup_crap(story_summary)
 
-            # Save the story summary
-            story_summary = self.remove_heading(story_summary)
-
-            with open(summary_file, 'w', encoding='utf-8') as f:
-                f.write(story_summary)
-            print(f"  Saved story summary to {summary_file}")
-            
-            # Calculate and display elapsed time
-            elapsed_time = time.time() - start_time
-            print(f"  Story {story['id']} summarized in {elapsed_time:.2f} sec")
+                # Save the story summary
+                with open(summary_file, 'w', encoding='utf-8') as f:
+                    f.write(story_summary)
+                print(f"  Saved story summary to {summary_file}")
+                
+                # Calculate and display elapsed time
+                elapsed_time = time.time() - start_time
+                print(f"  Story {story['id']} summarized in {elapsed_time:.2f} sec")
         
         # Generate comments summary if needed and we have comments
         if not comments_content and os.path.exists(comments_file):
@@ -326,18 +326,17 @@ class StorySummarizer:
             if not os.path.exists(comments_summary_file):
                 print("  Summarizing comments...")
                 start_time = time.time()
-                comments_summary = self.summarize(comments_content, "comments")
-                
-                # Save the comments summary
-                comments_summary = self.remove_heading(comments_summary)
+                if comments_summary := self.summarize(comments_content, "comments"):
+                    comments_summary = self.cleanup_crap(comments_summary)
 
-                with open(comments_summary_file, 'w', encoding='utf-8') as f:
-                    f.write(comments_summary)
-                print(f"  Saved comments summary to {comments_summary_file}")
-                
-                # Calculate and display elapsed time
-                elapsed_time = time.time() - start_time
-                print(f"  Comments {story['id']} summarized in {elapsed_time:.2f} sec")
+                    # Save the comments summary
+                    with open(comments_summary_file, 'w', encoding='utf-8') as f:
+                        f.write(comments_summary)
+                    print(f"  Saved comments summary to {comments_summary_file}")
+                    
+                    # Calculate and display elapsed time
+                    elapsed_time = time.time() - start_time
+                    print(f"  Comments {story['id']} summarized in {elapsed_time:.2f} sec")
 
         # Sleep to be nice to APIs and servers
         time.sleep(1)
