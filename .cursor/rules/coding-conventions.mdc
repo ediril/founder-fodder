@@ -8,6 +8,7 @@ alwaysApply: true
 - Type check: `mypy --ignore-missing-imports .`
 
 ## Code Style Guidelines
-- **Imports**: Group standard library, third-party, and local imports with a blank line between groups
-- **CSS**: Follow BEM (Block Element Modifier) naming convention
-- **JavaScript**: Use ES6 features, camelCase for variables and functions
+- Regarding imports, group standard library, third-party, and local imports with a blank line between groups.
+- Follow BEM (Block Element Modifier) naming convention for CSS.
+- Regarding JavaScript, use ES6 features, camelCase for variables and functions.
+- Put all CSS in static/css/site.css file.
