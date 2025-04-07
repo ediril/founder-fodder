@@ -41,7 +41,7 @@
             
             <?php if (empty($stories['stories'])): ?>
             <div class="notification is-warning">
-                No stories found. Please try another category or check back later.
+                No stories found.
             </div>
             <?php else: ?>
             
@@ -71,7 +71,7 @@
                             <span><i class="fas fa-globe"></i> <?php echo htmlspecialchars($story['domain']); ?></span> · 
                         </p>
                         <div class="story-actions">
-                            <a href="<?php echo htmlspecialchars($story['comments_url'] ?: '#'); ?>" class="button is-small" target="_blank">
+                            <a href="<?php echo htmlspecialchars($story['comments_url']); ?>" class="button is-small pl-3" target="_blank">
                                 <span class="icon"><i class="fa-regular fa-comment"></i></span>
                                 <span><?php echo (int)$story['comments_count']; ?></span>
                             </a>
@@ -79,7 +79,7 @@
                             $summary_files = check_summary_files($story['id']);
                             if ($summary_files['has_story_summary'] || $summary_files['has_comments_summary']): 
                             ?>
-                            <a href="/summary/<?php echo htmlspecialchars($story['id']); ?>" class="button is-small">
+                            <a href="/summary/<?php echo htmlspecialchars($story['id']); ?>" class="button is-small pl-3">
                                 <span class="icon"><i class="fa-regular fa-file-lines"></i></span>
                                 <span>Summary</span>
                             </a>
