@@ -61,17 +61,19 @@
                     </div>
                     <div class="story-content">
                         <p class="title is-5">
-                            <a href="<?php echo htmlspecialchars($story['url'] ?: $story['comments_url']); ?>" target="_blank">
+                            <a href="<?php echo htmlspecialchars($story['url']); ?>">
                                 <?php echo htmlspecialchars($story['title']); ?>
                             </a>
                         </p>
                         <p class="subtitle is-6">
-                            <span><i class="fa-solid fa-arrow-up"></i> <?php echo (int)$story['score']; ?></span> · 
+                            <span><i class="fas fa-globe"></i> <?php echo htmlspecialchars($story['domain']); ?></span>
+                        </p>
+                        <p class="subtitle is-6">
+                            <span><i class="fa-solid fa-arrow-up"></i> <?php echo (int)$story['score']; ?></span>
                             <span><i class="fa-regular fa-clock"></i> <?php echo htmlspecialchars($story['time_ago']); ?></span>
-                            <span><i class="fas fa-globe"></i> <?php echo htmlspecialchars($story['domain']); ?></span> · 
                         </p>
                         <div class="story-actions">
-                            <a href="<?php echo htmlspecialchars($story['comments_url']); ?>" class="button is-small pl-3" target="_blank">
+                            <a href="<?php echo htmlspecialchars($story['comments_url']); ?>" class="button is-small pl-3">
                                 <span class="icon"><i class="fa-regular fa-comment"></i></span>
                                 <span><?php echo (int)$story['comments_count']; ?></span>
                             </a>
