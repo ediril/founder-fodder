@@ -67,8 +67,6 @@
                         </p>
                         <p class="subtitle is-6">
                             <span><i class="fas fa-globe"></i> <?php echo htmlspecialchars($story['domain']); ?></span>
-                        </p>
-                        <p class="subtitle is-6">
                             <span><i class="fa-solid fa-arrow-up"></i> <?php echo (int)$story['score']; ?></span>
                             <span><i class="fa-regular fa-clock"></i> <?php echo htmlspecialchars($story['time_ago']); ?></span>
                         </p>
