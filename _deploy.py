@@ -7,6 +7,7 @@ import os
 import argparse
 import ftplib
 import yaml
+import sqlite3
 from datetime import datetime
 
 def load_config(config_file):
@@ -46,6 +47,9 @@ def deploy_content(ftp, remote_dir):
         ftp: FTP connection
         remote_dir: Remote directory path
     """
+    # Clean up unused images before deployment
+    cleanup_unused_images()
+    
     # Navigate to remote directory
     if remote_dir:
         try:
@@ -56,12 +60,14 @@ def deploy_content(ftp, remote_dir):
             ftp.mkd(remote_dir)
             ftp.cwd(remote_dir)
     
-    # Upload images
-    print("Uploading images...")
+    print("Uploading story images...")
     image_dir = os.path.join('static', 'img', 'stories')
-    upload_directory(ftp, image_dir, 'static/img/stories')
+    upload_directory(ftp, image_dir, 'static/img/stories', remote_dir)
     
-    # Upload database
+    print("Uploading summaries...")
+    content_dir = os.path.join('static', 'content')
+    upload_directory(ftp, content_dir, 'static/content', remote_dir)
+    
     print("Uploading database...")
     ftp.cwd(f"/{remote_dir}")  # Go to root first
     with open('hn_stories.db', 'rb') as f:
@@ -92,7 +98,10 @@ def deploy_code(ftp, remote_dir):
         with open(file, 'rb') as f:
             ftp.storbinary(f'STOR {file}', f)
             print(f"Uploaded {file}")
-    
+    # Upload template files
+    upload_directory(ftp, 'templates', 'templates', remote_dir)
+    upload_directory(ftp, 'vendor', 'vendor', remote_dir)
+
     # Upload CSS files
     print("Uploading CSS files...")
     css_dir = os.path.join('static', 'css')
@@ -103,12 +112,8 @@ def deploy_code(ftp, remote_dir):
     js_dir = os.path.join('static', 'js')
     upload_directory(ftp, js_dir, 'static/js', remote_dir)
 
-    # Upload template files
-    print("Uploading template files...")
-    template_dir = 'templates'
-    upload_directory(ftp, template_dir, 'templates', remote_dir)
 
-def upload_directory(ftp, local_dir, remote_dir, base_remote_dir=''):
+def upload_directory(ftp, local_dir, upload_dir, base_dir):
     """
     Upload a directory and its contents recursively.
     
@@ -123,18 +128,11 @@ def upload_directory(ftp, local_dir, remote_dir, base_remote_dir=''):
         print(f"Warning: Local directory {local_dir} does not exist, skipping...")
         return
     
-    # First, go to the base remote directory if specified
-    if base_remote_dir:
-        try:
-            ftp.cwd('/')  # Go to root first
-            if base_remote_dir:
-                ftp.cwd(base_remote_dir)
-        except ftplib.error_perm as e:
-            print(f"Error navigating to base directory {base_remote_dir}: {e}")
-            return
+    # First, go to the remote base directory
+    ftp.cwd(base_dir)
     
-    # Create remote directory structure recursively
-    remote_parts = remote_dir.split('/')
+    # Create remote directory structure recursively if missing
+    remote_parts = upload_dir.split('/')
     for part in remote_parts:
         if not part:
             continue
@@ -144,7 +142,7 @@ def upload_directory(ftp, local_dir, remote_dir, base_remote_dir=''):
             # Try to create the directory
             ftp.mkd(part)
             ftp.cwd(part)                
-    
+
     # Get list of files in the remote directory
     remote_files = []
     try:
@@ -184,8 +182,8 @@ def upload_directory(ftp, local_dir, remote_dir, base_remote_dir=''):
             # Handle subdirectories, skip __pycache__ and similar
             upload_directory(ftp, local_path, item, '')
     
-    # Delete remote files that don't exist locally (only for image directories)
-    if 'static/img' in local_dir:
+    # Delete remote files that don't exist locally
+    if 'static/img' or 'static/content' in local_dir:
         files_to_delete = remote_files - local_files
         for file_to_delete in files_to_delete:
             # Skip special directory entries
@@ -199,6 +197,54 @@ def upload_directory(ftp, local_dir, remote_dir, base_remote_dir=''):
     
     # Go back up a directory
     ftp.cwd('..')
+
+def cleanup_unused_images():
+    """
+    Remove images from static/img/stories that don't exist in the database.
+    """
+    print("Cleaning up unused images...")
+    
+    # Connect to the database
+    try:
+        conn = sqlite3.connect('hn_stories.db')
+        cursor = conn.cursor()
+        
+        # Get all story IDs from the database
+        cursor.execute("SELECT id FROM stories")
+        story_ids = [str(row[0]) for row in cursor.fetchall()]
+        
+        # Close the database connection
+        conn.close()
+        
+        # Get all image files in the static/img/stories directory
+        image_dir = os.path.join('static', 'img', 'stories')
+        if not os.path.exists(image_dir):
+            print(f"Warning: Image directory {image_dir} does not exist, skipping cleanup.")
+            return
+            
+        image_files = [f for f in os.listdir(image_dir) if f.endswith('.jpg') or f.endswith('.png')]
+        
+        # Find images that don't have corresponding stories in the database
+        unused_images = []
+        for image_file in image_files:
+            # Extract story ID from image filename (assuming format: story_id.jpg or story_id.png)
+            story_id = image_file.split('.')[0]
+            if story_id not in story_ids:
+                unused_images.append(image_file)
+        
+        # Remove unused images
+        for image_file in unused_images:
+            image_path = os.path.join(image_dir, image_file)
+            try:
+                os.remove(image_path)
+                print(f"Removed unused image: {image_file}")
+            except Exception as e:
+                print(f"Error removing image {image_file}: {e}")
+        
+        print(f"Cleanup complete. Removed {len(unused_images)} unused images.")
+        
+    except Exception as e:
+        print(f"Error during image cleanup: {e}")
 
 def main():
     parser = argparse.ArgumentParser(description='Deploy to web host via FTP')
@@ -229,11 +275,11 @@ def main():
         print(f"Connected to {host} using TLS")
         
         # Deploy based on selected mode
-        if args.mode == 'content' or args.mode == 'all':
-            deploy_content(ftp, remote_dir)
-            
         if args.mode == 'code' or args.mode == 'all':
             deploy_code(ftp, remote_dir)
+
+        if args.mode == 'content' or args.mode == 'all':
+            deploy_content(ftp, remote_dir)
         
         print("Deployment completed successfully!")
         ftp.quit()
