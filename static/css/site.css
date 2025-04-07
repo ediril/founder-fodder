@@ -466,15 +466,25 @@ body {
 
 @media (max-width: 767px) {
     .summary-hero {
-        padding: 2rem 1rem;
+        padding: 1rem 0;
     }
-    
     .summary-hero .title {
         font-size: 1.5rem;
     }
-    
     .summary-section {
-        padding: 1.5rem 1rem;
+        padding: 0.5rem 0.75rem;
+    }
+    .summary-card {
+        padding: 0.75rem;
+    }
+    .summary-content {
+        padding: 0.5rem 0;
+    }
+    
+    /* Remove indentation for lists in mobile view */
+    .summary-content.markdown-body ul,
+    .summary-content.markdown-body ol {
+        padding-left: 0;
     }
     
     /* Mobile styles for story cards */
