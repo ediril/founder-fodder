@@ -1,5 +1,4 @@
 venv/
-.vscode/
 img/
 _originals/
 content/
@@ -8,5 +7,4 @@ vendor/
 .DS_Store
 *.db*
 *.log
-temp_page.html
 ftp_config.yaml
