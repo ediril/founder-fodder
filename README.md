@@ -12,3 +12,8 @@ git submodule update --init --recursive
 ```
 git submodule update --remote
 ```
+
+# How to push changes to submodule's repo:
+- Commit the change to the submodule
+- `git push origin HEAD:main`
+- Stage the submodule to update its reference in the parent project
