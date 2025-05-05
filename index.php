@@ -12,10 +12,28 @@ const STORIES_PER_PAGE = 10;
  * Connect to the SQLite database
  */
 function get_db_connection(): PDO {
-    $conn = new PDO("sqlite:" . DB_PATH);
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    $conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-    return $conn;
+    $db_file = DB_PATH;
+    if (!file_exists($db_file)) {
+        throw new Exception("Database file not found: {$db_file}");
+    }
+    
+    try {
+        $conn = new PDO("sqlite:" . $db_file);
+        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+        return $conn;
+    } catch (PDOException $e) {
+        throw new Exception("Database connection failed: " . $e->getMessage());
+    }
+}
+
+/**
+ * Close the database connection
+ */
+function close_db_connection(?PDO $conn): void {
+    if ($conn !== null) {
+        $conn = null;
+    }
 }
 
 /**
@@ -110,6 +128,8 @@ function get_stories(): array {
             debugLog("Database query failed: " . $e->getMessage());
             http_response_code(500);
             return ["error" => "Database query failed: " . $e->getMessage()];
+        } finally {
+            close_db_connection($conn);
         }
     } catch (Exception $e) {
         debugLog("Unexpected error in get_stories: " . $e->getMessage());
@@ -196,6 +216,8 @@ function get_page_stories(string $story_type = 'top', int $page = 1, int $per_pa
             'type' => $story_type,
             'error' => $e->getMessage()
         ];
+    } finally {
+        close_db_connection($conn);
     }
 }
 
@@ -235,6 +257,8 @@ function get_stats(): array {
     } catch (Exception $e) {
         http_response_code(500);
         return ["error" => $e->getMessage()];
+    } finally {
+        close_db_connection($conn);
     }
 }
 
