@@ -1,0 +1,3 @@
+[submodule "banalytics"]
+	path = banalytics
+	url = https://github.com/ediril/banalytics.git

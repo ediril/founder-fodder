@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+require_once 'banalytics/banalytics.php';
+record_visit();
+
 // Database path
 const DB_PATH = "hn_stories.db";
 const STORIES_PER_PAGE = 10;
