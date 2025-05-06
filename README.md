@@ -1,7 +1,19 @@
-# How to run
+# How to run the site locally
 ```
 php -S localhost:8000
 ```
+
+# How to fetch new content from HN
+TODO
+
+# How to summarize new content
+TODO
+
+# How to deploy new content
+TODO
+
+# How to deploy code changes
+TODO
 
 # How to init submodules after clone
 ```

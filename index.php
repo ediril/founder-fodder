@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require_once 'banalytics/banalytics.php';
+require_once 'banalytiq/banalytiq.php';
 record_visit();
 
 // Database path
