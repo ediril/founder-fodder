@@ -1,3 +1,5 @@
 - Dark mode
 - About page
 - If there is an arhive link in the comments (e.g. https://archive.ph/P2cU1), use it to download the story content
+- Opening pages take forever, cache them
+- Summary of page + comments with click to show collect summary
