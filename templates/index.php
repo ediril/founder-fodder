@@ -16,7 +16,7 @@
                     <i class="fa-solid fa-fire"></i> Founder Fodder
                 </h1>
                 <p class="subtitle">
-                    Inspiration for Founders, Developers, and Makers
+                    Inspiration for Founders, Makers and Tinkerers
                 </p>
             </div>
         </div>
