@@ -1,10 +1,12 @@
 # How to run the site locally
 ```
-php -S localhost:8000
+$ php -S localhost:8000
 ```
 
 # How to fetch new content from HN
-TODO
+```
+$ php fetch.php --type=top --limit=50
+```
 
 # How to summarize new content
 TODO
