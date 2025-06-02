@@ -1,5 +1,10 @@
 RewriteEngine On
 
+# Only forbid when not on the matching subdomain
+RewriteCond %{HTTP_HOST} !^(www\.)?founderfodder\.com$ [NC]
+RewriteRule ^ - [R=404,L]
+
+
 # If the requested file or directory exists, serve it directly
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
