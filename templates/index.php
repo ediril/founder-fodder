@@ -76,7 +76,7 @@
                                 <span><?php echo (int)$story['comments_count']; ?></span>
                             </a>
                             <?php 
-                            $summary_files = check_summary_files($story['id']);
+                            $summary_files = $story['summary_files'] ?? ['has_story_summary' => false, 'has_comments_summary' => false];
                             if ($summary_files['has_story_summary'] || $summary_files['has_comments_summary']): 
                             ?>
                             <a href="/summary/<?php echo htmlspecialchars($story['id']); ?>" class="button is-small pl-3">

@@ -99,25 +99,36 @@ function get_stories(): array {
             
             // Convert to array of associative arrays
             $stories = [];
+            $story_ids = [];
             while ($row = $stmt->fetch()) {
                 // Add additional fields
                 $row['time_ago'] = format_time_ago((int)$row['timestamp']);
                 $row['formatted_time'] = date("Y-m-d H:i:s", (int)$row['timestamp']);
                 
-                // Generate image URL based on story ID if the image exists
-                $img_path = "static/img/stories/{$row['id']}.jpg";
-                
-                // Log file existence check
-                debugLog("Checking for image: $img_path, exists: " . (file_exists($img_path) ? "yes" : "no"));
-                
-                if (file_exists($img_path)) {
-                    $row['image_url'] = "/{$img_path}";
-                } else {
-                    // Don't include image_url if file doesn't exist
-                    $row['image_url'] = "";
-                }
-                
                 $stories[] = $row;
+                $story_ids[] = $row['id'];
+            }
+            
+            // Batch check image and summary files for all stories at once
+            if (!empty($story_ids)) {
+                $image_files = batch_check_image_files($story_ids);
+                $summary_files = batch_check_summary_files($story_ids);
+                
+                // Add file information to each story
+                foreach ($stories as &$story) {
+                    // Generate image URL based on story ID if the image exists
+                    if ($image_files[$story['id']] ?? false) {
+                        $story['image_url'] = "/static/img/stories/{$story['id']}.jpg";
+                    } else {
+                        $story['image_url'] = "";
+                    }
+                    
+                    $story['summary_files'] = $summary_files[$story['id']] ?? [
+                        'has_story_summary' => false,
+                        'has_comments_summary' => false
+                    ];
+                }
+                unset($story); // Clean up reference
             }
             
             debugLog("Retrieved " . count($stories) . " stories from database");
@@ -167,21 +178,36 @@ function get_page_stories(string $story_type = 'top', int $page = 1, int $per_pa
         
         // Convert to array of associative arrays
         $stories = [];
+        $story_ids = [];
         while ($row = $stmt->fetch()) {
             // Add additional fields
             $row['time_ago'] = format_time_ago((int)$row['timestamp']);
             $row['formatted_time'] = date("Y-m-d H:i:s", (int)$row['timestamp']);
             
-            // Generate image URL based on story ID if the image exists
-            $img_path = "static/img/stories/{$row['id']}.jpg";
-            if (file_exists($img_path)) {
-                $row['image_url'] = "/{$img_path}";
-            } else {
-                // Don't include image_url if file doesn't exist
-                $row['image_url'] = "";
-            }
-            
             $stories[] = $row;
+            $story_ids[] = $row['id'];
+        }
+        
+        // Batch check image and summary files for all stories at once
+        if (!empty($story_ids)) {
+            $image_files = batch_check_image_files($story_ids);
+            $summary_files = batch_check_summary_files($story_ids);
+            
+            // Add file information to each story
+            foreach ($stories as &$story) {
+                // Generate image URL based on story ID if the image exists
+                if ($image_files[$story['id']] ?? false) {
+                    $story['image_url'] = "/static/img/stories/{$story['id']}.jpg";
+                } else {
+                    $story['image_url'] = "";
+                }
+                
+                $story['summary_files'] = $summary_files[$story['id']] ?? [
+                    'has_story_summary' => false,
+                    'has_comments_summary' => false
+                ];
+            }
+            unset($story); // Clean up reference
         }
         
         // Add pagination info
@@ -259,6 +285,39 @@ function get_page_stories(string $story_type = 'top', int $page = 1, int $per_pa
 //         close_db_connection($conn);
 //     }
 // }
+
+/**
+ * Check if image files exist for multiple stories at once
+ */
+function batch_check_image_files(array $story_ids): array {
+    $results = [];
+    
+    foreach ($story_ids as $story_id) {
+        $img_path = "static/img/stories/{$story_id}.jpg";
+        $results[$story_id] = file_exists($img_path);
+    }
+    
+    return $results;
+}
+
+/**
+ * Check if summary files exist for multiple stories at once
+ */
+function batch_check_summary_files(array $story_ids): array {
+    $results = [];
+    
+    foreach ($story_ids as $story_id) {
+        $story_summary_path = "static/content/{$story_id}-story-summary.md";
+        $comments_summary_path = "static/content/{$story_id}-comments-summary.md";
+        
+        $results[$story_id] = [
+            'has_story_summary' => file_exists($story_summary_path),
+            'has_comments_summary' => file_exists($comments_summary_path)
+        ];
+    }
+    
+    return $results;
+}
 
 /**
  * Check if summary files exist for a story
