@@ -1,0 +1,591 @@
+<?php
+
+// Security: Only allow execution from command line
+if (php_sapi_name() !== 'cli') {
+    http_response_code(404);
+    die('404 Not Found');
+}
+
+require_once __DIR__ . '/defines.php';
+
+class HackerNewsFetcher
+{
+    private const BASE_URL = "https://hacker-news.firebaseio.com/v0";
+    private const ENDPOINTS = [
+        "top" => self::BASE_URL . "/topstories.json",   // front-page
+        "new" => self::BASE_URL . "/newstories.json",   // newest
+        "best" => self::BASE_URL . "/beststories.json"  // highest-scoring
+    ];
+    private const ITEM_URL = self::BASE_URL . "/item";
+
+    private string $dbPath;
+    private string $imgDir;
+    private \PDO $pdo;
+
+    public function __construct(string $dbPath = DB_PATH, string $imgDir = "static/img/stories")
+    {
+        $this->dbPath = $dbPath;
+        $this->imgDir = $imgDir;
+        $this->initDb();
+        
+        // Ensure image directory exists
+        if (!is_dir($this->imgDir)) {
+            mkdir($this->imgDir, 0755, true);
+        }
+    }
+
+    private function initDb(): void
+    {
+        $this->pdo = new \PDO("sqlite:{$this->dbPath}");
+        $this->pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+        
+        // Create the stories table if it doesn't exist
+        $this->pdo->exec('
+            CREATE TABLE IF NOT EXISTS stories (
+                id INTEGER PRIMARY KEY,
+                title TEXT,
+                url TEXT,
+                domain TEXT,
+                comments_url TEXT,
+                comments_count INTEGER,
+                score INTEGER,
+                user TEXT,
+                timestamp INTEGER,
+                fetched_at INTEGER,
+                type TEXT,
+                ranking INTEGER
+            )
+        ');
+        
+        // Create indices for faster queries
+        $this->pdo->exec('CREATE INDEX IF NOT EXISTS idx_story_type ON stories(type, ranking)');
+        $this->pdo->exec('CREATE INDEX IF NOT EXISTS idx_story_timestamp ON stories(timestamp)');
+    }
+
+    private function fetchStoryIds(string $storyType): array
+    {
+        $url = self::ENDPOINTS[$storyType] ?? null;
+        if (!$url) {
+            echo "Invalid story type: {$storyType}\n";
+            return [];
+        }
+
+        $context = stream_context_create([
+            'http' => [
+                'timeout' => 30,
+                'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            ]
+        ]);
+
+        $response = file_get_contents($url, false, $context);
+        if ($response === false) {
+            echo "Error fetching {$storyType} stories\n";
+            return [];
+        }
+
+        $data = json_decode($response, true);
+        return $data ?? [];
+    }
+
+    private function fetchStoryDetails(int $storyId): ?array
+    {
+        $url = self::ITEM_URL . "/{$storyId}.json";
+        
+        $context = stream_context_create([
+            'http' => [
+                'timeout' => 30,
+                'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            ]
+        ]);
+
+        $response = file_get_contents($url, false, $context);
+        if ($response === false) {
+            echo "Error fetching story {$storyId}\n";
+            return null;
+        }
+
+        return json_decode($response, true);
+    }
+
+    private function saveStoryImage(int $storyId, ?string $imageUrl): void
+    {
+        // Check if image already exists with any extension
+        $extensions = ['.jpg', '.png', '.gif', '.webp'];
+        foreach ($extensions as $ext) {
+            $filepath = $this->imgDir . "/{$storyId}{$ext}";
+            if (file_exists($filepath)) {
+                return; // Silently skip if image already exists
+            }
+        }
+
+        // If no URL or invalid URL, don't save anything
+        if (!$imageUrl || !str_starts_with($imageUrl, 'http')) {
+            echo "No valid image URL for story {$storyId}\n";
+            return;
+        }
+
+        try {
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 10,
+                    'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'method' => 'HEAD'
+                ]
+            ]);
+
+            // First check if the URL is actually an image
+            $headers = get_headers($imageUrl, true, $context);
+            $contentType = '';
+            if ($headers && isset($headers['Content-Type'])) {
+                $contentType = is_array($headers['Content-Type']) 
+                    ? end($headers['Content-Type']) 
+                    : $headers['Content-Type'];
+            }
+
+            // If it's not an image, try to extract an image from the page
+            if (!str_starts_with($contentType, 'image/')) {
+                $imageUrl = $this->extractImageFromPage($imageUrl);
+                if (!$imageUrl) {
+                    return;
+                }
+            }
+
+            // Download the image
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 10,
+                    'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                ]
+            ]);
+
+            $imageData = file_get_contents($imageUrl, false, $context);
+            if ($imageData === false) {
+                echo "Failed to download image for story {$storyId}\n";
+                return;
+            }
+
+            // Determine file extension
+            $ext = '.jpg'; // default
+            if (str_contains($contentType, 'png')) {
+                $ext = '.png';
+            } elseif (str_contains($contentType, 'gif')) {
+                $ext = '.gif';
+            } elseif (str_contains($contentType, 'webp')) {
+                $ext = '.webp';
+            }
+
+            $filepath = $this->imgDir . "/{$storyId}{$ext}";
+            if (file_put_contents($filepath, $imageData) !== false) {
+                echo "Successfully downloaded image for story {$storyId}\n";
+            }
+
+        } catch (\Exception $e) {
+            echo "Error downloading image for story {$storyId}: " . $e->getMessage() . "\n";
+        }
+    }
+
+    private function extractImageFromPage(string $url): ?string
+    {
+        try {
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 10,
+                    'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                ]
+            ]);
+
+            $html = file_get_contents($url, false, $context);
+            if ($html === false) {
+                return null;
+            }
+
+            $dom = new \DOMDocument();
+            @$dom->loadHTML($html);
+            $xpath = new \DOMXPath($dom);
+
+            $parsedUrl = parse_url($url);
+            $baseUrl = $parsedUrl['scheme'] . '://' . $parsedUrl['host'];
+
+            // Try Open Graph image
+            $ogImage = $xpath->query('//meta[@property="og:image"]/@content');
+            if ($ogImage->length > 0) {
+                $imgUrl = $ogImage->item(0)->nodeValue;
+                if (!str_starts_with($imgUrl, 'http')) {
+                    $imgUrl = $baseUrl . '/' . ltrim($imgUrl, '/');
+                }
+                return $imgUrl;
+            }
+
+            // Try Twitter card image
+            $twitterImage = $xpath->query('//meta[@name="twitter:image"]/@content');
+            if ($twitterImage->length > 0) {
+                $imgUrl = $twitterImage->item(0)->nodeValue;
+                if (!str_starts_with($imgUrl, 'http')) {
+                    $imgUrl = $baseUrl . '/' . ltrim($imgUrl, '/');
+                }
+                return $imgUrl;
+            }
+
+            // Look for large images in content
+            $images = $xpath->query('//img[@src]');
+            foreach ($images as $img) {
+                $src = $img->getAttribute('src');
+                if (empty($src)) continue;
+
+                // Skip icons, logos, avatars, etc.
+                $skipTerms = ['icon', 'logo', 'avatar', 'favicon', 'spinner', 'button'];
+                if (array_any($skipTerms, fn($term) => str_contains(strtolower($src), $term))) {
+                    continue;
+                }
+
+                // Make relative URLs absolute
+                if (!str_starts_with($src, 'http')) {
+                    $src = $baseUrl . '/' . ltrim($src, '/');
+                }
+
+                // Check dimensions if available
+                $width = $img->getAttribute('width');
+                $height = $img->getAttribute('height');
+
+                if ($width && $height && (int)$width >= 300 && (int)$height >= 300) {
+                    return $src;
+                }
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            echo "Error extracting image from {$url}: " . $e->getMessage() . "\n";
+            return null;
+        }
+    }
+
+    private function extractImageUrl(string $url): ?string
+    {
+        if (empty($url)) {
+            return null;
+        }
+
+        try {
+            $parsedUrl = parse_url($url);
+            $path = strtolower($parsedUrl['path'] ?? '');
+
+            // Skip common non-HTML file types
+            $skipExtensions = [
+                '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+                '.txt', '.rtf', '.csv', '.zip', '.rar', '.tar', '.gz',
+                '.mp3', '.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv',
+                '.exe', '.dmg', '.iso', '.img', '.bin', '.dat'
+            ];
+
+            foreach ($skipExtensions as $ext) {
+                if (str_ends_with($path, $ext)) {
+                    echo "Skipping image extraction for non-HTML file: {$url}\n";
+                    return null;
+                }
+            }
+
+            $context = stream_context_create([
+                'http' => [
+                    'timeout' => 10,
+                    'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                ]
+            ]);
+
+            $html = file_get_contents($url, false, $context);
+            if ($html === false) {
+                echo "Failed to fetch page {$url}\n";
+                return null;
+            }
+
+            // Check content type
+            $headers = $http_response_header ?? [];
+            $contentType = '';
+            foreach ($headers as $header) {
+                if (str_starts_with(strtolower($header), 'content-type:')) {
+                    $contentType = strtolower(trim(substr($header, 13)));
+                    break;
+                }
+            }
+
+            if (!str_starts_with($contentType, 'text/html') && !str_contains($contentType, 'application/json')) {
+                echo "Skipping image extraction for non-HTML content type: {$contentType} - {$url}\n";
+                return null;
+            }
+
+            return $this->extractImageFromPage($url);
+
+        } catch (\Exception $e) {
+            echo "Error extracting image from {$url}: " . $e->getMessage() . "\n";
+            return null;
+        }
+    }
+
+    private function extractDomain(string $url): string
+    {
+        if (empty($url)) {
+            return "";
+        }
+
+        $parsedUrl = parse_url($url);
+        return $parsedUrl['host'] ?? "";
+    }
+
+    private function storeStory(array $story, string $storyType, int $ranking): void
+    {
+        if (empty($story)) {
+            return;
+        }
+
+        // Extract fields with defaults for missing values
+        $storyId = $story['id'] ?? 0;
+        $title = $story['title'] ?? '';
+        $url = $story['url'] ?? '';
+        $domain = $this->extractDomain($url);
+        $commentsUrl = "https://news.ycombinator.com/item?id={$storyId}";
+        $commentsCount = $story['descendants'] ?? 0;
+        $score = $story['score'] ?? 0;
+        $user = $story['by'] ?? '';
+        $timestamp = $story['time'] ?? 0;
+        $fetchedAt = time();
+
+        // Check if story already exists in the database
+        $stmt = $this->pdo->prepare('SELECT id FROM stories WHERE id = ?');
+        $stmt->execute([$storyId]);
+        $existing = $stmt->fetch();
+
+        // Check if image already exists for this story
+        $imageExists = false;
+        $extensions = ['.jpg', '.png', '.gif', '.webp'];
+        foreach ($extensions as $ext) {
+            if (file_exists($this->imgDir . "/{$storyId}{$ext}")) {
+                $imageExists = true;
+                break;
+            }
+        }
+
+        // Only try to fetch image if it doesn't exist
+        if (!$imageExists && !empty($url)) {
+            try {
+                $imageUrl = $this->extractImageUrl($url);
+                $this->saveStoryImage($storyId, $imageUrl);
+            } catch (\Exception $e) {
+                echo "Error processing image for story {$storyId}: " . $e->getMessage() . "\n";
+                $this->saveStoryImage($storyId, null);
+            }
+        } elseif (!$imageExists) {
+            $this->saveStoryImage($storyId, null);
+        }
+
+        if ($existing) {
+            // Update existing story
+            $stmt = $this->pdo->prepare('
+                UPDATE stories
+                SET title = ?, url = ?, domain = ?, comments_url = ?,
+                    comments_count = ?, score = ?, user = ?,
+                    timestamp = ?, fetched_at = ?, type = ?, ranking = ?
+                WHERE id = ?
+            ');
+            $stmt->execute([
+                $title, $url, $domain, $commentsUrl, $commentsCount, $score,
+                $user, $timestamp, $fetchedAt, $storyType, $ranking, $storyId
+            ]);
+        } else {
+            // Insert new story
+            $stmt = $this->pdo->prepare('
+                INSERT INTO stories
+                (id, title, url, domain, comments_url, comments_count, 
+                 score, user, timestamp, fetched_at, type, ranking)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ');
+            $stmt->execute([
+                $storyId, $title, $url, $domain, $commentsUrl, $commentsCount,
+                $score, $user, $timestamp, $fetchedAt, $storyType, $ranking
+            ]);
+        }
+    }
+
+    public function fetchAndStore(string $storyType = "top", int $limit = 100): int
+    {
+        echo "\nFetching {$storyType} stories...\n";
+        $storyIds = $this->fetchStoryIds($storyType);
+
+        if (empty($storyIds)) {
+            echo "No {$storyType} story IDs found\n";
+            return 0;
+        }
+
+        // Limit the number of stories to process
+        $storyIds = array_slice($storyIds, 0, $limit);
+        $newStoriesCount = count($storyIds);
+
+        // Shift down the rankings of existing stories that aren't being refetched
+        $placeholders = str_repeat('?,', count($storyIds) - 1) . '?';
+        $stmt = $this->pdo->prepare("
+            UPDATE stories 
+            SET ranking = ranking + ?
+            WHERE type = ? AND id NOT IN ({$placeholders})
+        ");
+        $params = array_merge([$newStoriesCount, $storyType], $storyIds);
+        $stmt->execute($params);
+
+        $count = 0;
+        foreach ($storyIds as $ranking => $storyId) {
+            $story = $this->fetchStoryDetails($storyId);
+            if ($story) {
+                $this->storeStory($story, $storyType, $ranking);
+                $count++;
+
+                // Print progress every 10 stories
+                if ($count % 10 === 0) {
+                    echo "Processed {$count}/" . count($storyIds) . " {$storyType} stories\n";
+                }
+
+                // Small delay to be nice to the API
+                usleep(100000); // 0.1 seconds
+            }
+        }
+
+        echo "Completed fetching {$count} {$storyType} stories\n";
+        
+        return $count;
+    }
+
+    public function fetchAll(int $limit = 100): int
+    {
+        $total = 0;
+        foreach (array_keys(self::ENDPOINTS) as $storyType) {
+            $count = $this->fetchAndStore($storyType, $limit);
+            $total += $count;
+        }
+
+        echo "Total stories fetched: {$total}\n";
+                
+        return $total;
+    }
+
+    /**
+     * Remove images from static/img/stories that don't exist in the database.
+     */
+    function cleanupUnusedImages(): void
+    {
+        echo "\nCleaning up unused images...\n";
+        
+        try {
+            // Get all story IDs from the database
+            $stmt = $this->pdo->prepare("SELECT id FROM stories");
+            $stmt->execute();
+            $storyIds = [];
+            while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+                $storyIds[] = (string)$row['id'];
+            }
+            
+            // Check if image directory exists
+            if (!is_dir($this->imgDir)) {
+                echo "Warning: Image directory {$this->imgDir} does not exist, skipping cleanup.\n";
+                return;
+            }
+            
+            // Get all image files in the static/img/stories directory
+            $imageFiles = [];
+            $allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+            
+            $files = scandir($this->imgDir);
+            foreach ($files as $file) {
+                if ($file === '.' || $file === '..') {
+                    continue;
+                }
+                
+                // Check if file has an allowed image extension
+                $hasValidExtension = false;
+                foreach ($allowedExtensions as $ext) {
+                    if (str_ends_with(strtolower($file), $ext)) {
+                        $hasValidExtension = true;
+                        break;
+                    }
+                }
+                
+                if ($hasValidExtension) {
+                    $imageFiles[] = $file;
+                }
+            }
+            
+            // Find images that don't have corresponding stories in the database
+            $unusedImages = [];
+            foreach ($imageFiles as $imageFile) {
+                // Extract story ID from image filename (assuming format: story_id.ext)
+                $storyId = pathinfo($imageFile, PATHINFO_FILENAME);
+                if (!in_array($storyId, $storyIds)) {
+                    $unusedImages[] = $imageFile;
+                }
+            }
+            
+            // Remove unused images
+            $removedCount = 0;
+            foreach ($unusedImages as $imageFile) {
+                $imagePath = $this->imgDir . '/' . $imageFile;
+                try {
+                    if (unlink($imagePath)) {
+                        echo "Removed unused image: {$imageFile}\n";
+                        $removedCount++;
+                    }
+                } catch (\Exception $e) {
+                    echo "Error removing image {$imageFile}: " . $e->getMessage() . "\n";
+                }
+            }
+            
+            echo "Cleanup complete. Removed {$removedCount} unused images.\n";
+            
+        } catch (\Exception $e) {
+            echo "Error during image cleanup: " . $e->getMessage() . "\n";
+        }
+    }
+}
+
+// Helper function for array_any (not available in PHP 8.3)
+if (!function_exists('array_any')) {
+    function array_any(array $array, callable $callback): bool
+    {
+        foreach ($array as $item) {
+            if ($callback($item)) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+// Command line interface
+if (php_sapi_name() === 'cli') {
+    $options = getopt('', ['type:', 'limit:', 'db:', 'help']);
+    
+    if (isset($options['help'])) {
+        echo "Usage: php fetch.php [options]\n";
+        echo "Options:\n";
+        echo "  --type=TYPE     Type of stories to fetch: top, new, best, all (default: all)\n";
+        echo "  --limit=LIMIT   Maximum number of stories to fetch per type (default: 100)\n";
+        echo "  --db=PATH       Path to SQLite database (default: stories.db)\n";
+        echo "  --help          Show this help message\n";
+        exit(0);
+    }
+    
+    $type = $options['type'] ?? 'all';
+    $limit = (int)($options['limit'] ?? 100);
+    $db = $options['db'] ?? DB_PATH;
+    
+    $validTypes = ['top', 'new', 'best', 'all'];
+    if (!in_array($type, $validTypes)) {
+        echo "Error: Invalid type '{$type}'. Valid types are: " . implode(', ', $validTypes) . "\n";
+        exit(1);
+    }
+    
+    $fetcher = new HackerNewsFetcher($db);
+    
+    if ($type === 'all') {
+        $fetcher->fetchAll($limit);
+    } else {
+        $fetcher->fetchAndStore($type, $limit);
+    }
+
+    // Clean up unused images after fetching
+    $fetcher->cleanupUnusedImages();
+} 
