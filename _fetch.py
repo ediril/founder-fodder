@@ -12,9 +12,9 @@ class HackerNewsFetcher:
     # API Endpoints
     BASE_URL = "https://hacker-news.firebaseio.com/v0"
     ENDPOINTS = {
-        "top": f"{BASE_URL}/topstories.json",
-        "new": f"{BASE_URL}/newstories.json",
-        "best": f"{BASE_URL}/beststories.json"
+        "top": f"{BASE_URL}/topstories.json",   # front-page
+        "new": f"{BASE_URL}/newstories.json",   # newest
+        "best": f"{BASE_URL}/beststories.json"  # highest-scoring
     }
     ITEM_URL = f"{BASE_URL}/item"
     
