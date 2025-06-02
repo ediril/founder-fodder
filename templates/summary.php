@@ -28,6 +28,11 @@ error_reporting(E_ALL & ~E_DEPRECATED);
                 <h1 class="title is-2 has-text-white">
                     <?php echo htmlspecialchars($story['title']); ?>
                 </h1>
+                <p class="subtitle is-6 pt-1">
+                    <span><i class="fa-solid fa-clock"></i> <?php echo htmlspecialchars($story['time_ago']); ?></span>
+                    <span><i class="fas fa-globe pl-2"></i> <?php echo htmlspecialchars($story['domain']); ?></span>
+                    <span><i class="fa-solid fa-arrow-up pl-2"></i> <?php echo (int)$story['score']; ?></span>
+                </p>
                 <h2 class="subtitle is-6 pt-3 has-text-white">
                     <a href="<?php echo htmlspecialchars($story['url']); ?>" class="has-text-white">
                         <i class="fa-solid fa-external-link"></i> Original Story

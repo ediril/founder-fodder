@@ -1,12 +1,10 @@
 <?php
 declare(strict_types=1);
 
-require_once 'banalytiq/banalytiq.php';
+require_once __DIR__ . '/banalytiq/banalytiq.php';
 record_visit();
 
-// Database path
-const DB_PATH = "hn_stories.db";
-const STORIES_PER_PAGE = 10;
+require_once __DIR__ . '/defines.php';
 
 /**
  * Connect to the SQLite database
@@ -224,43 +222,43 @@ function get_page_stories(string $story_type = 'top', int $page = 1, int $per_pa
 /**
  * Get statistics about stored stories
  */
-function get_stats(): array {
-    try {
-        $conn = get_db_connection();
+// function get_stats(): array {
+//     try {
+//         $conn = get_db_connection();
         
-        // Count stories by type
-        $stmt = $conn->query('
-            SELECT type, COUNT(*) as count
-            FROM stories
-            GROUP BY type
-        ');
+//         // Count stories by type
+//         $stmt = $conn->query('
+//             SELECT type, COUNT(*) as count
+//             FROM stories
+//             GROUP BY type
+//         ');
         
-        $type_counts = [];
-        while ($row = $stmt->fetch()) {
-            $type_counts[$row['type']] = (int)$row['count'];
-        }
+//         $type_counts = [];
+//         while ($row = $stmt->fetch()) {
+//             $type_counts[$row['type']] = (int)$row['count'];
+//         }
         
-        // Get most recent fetch time
-        $stmt = $conn->query('SELECT MAX(fetched_at) as last_fetch FROM stories');
-        $result = $stmt->fetch();
-        $last_fetch = $result['last_fetch'];
+//         // Get most recent fetch time
+//         $stmt = $conn->query('SELECT MAX(fetched_at) as last_fetch FROM stories');
+//         $result = $stmt->fetch();
+//         $last_fetch = $result['last_fetch'];
         
-        // Format time ago
-        $last_fetch_ago = $last_fetch ? format_time_ago((int)$last_fetch) : 'never';
+//         // Format time ago
+//         $last_fetch_ago = $last_fetch ? format_time_ago((int)$last_fetch) : 'never';
         
-        return [
-            'counts' => $type_counts,
-            'total' => array_sum($type_counts),
-            'last_fetch' => $last_fetch,
-            'last_fetch_ago' => $last_fetch_ago
-        ];
-    } catch (Exception $e) {
-        http_response_code(500);
-        return ["error" => $e->getMessage()];
-    } finally {
-        close_db_connection($conn);
-    }
-}
+//         return [
+//             'counts' => $type_counts,
+//             'total' => array_sum($type_counts),
+//             'last_fetch' => $last_fetch,
+//             'last_fetch_ago' => $last_fetch_ago
+//         ];
+//     } catch (Exception $e) {
+//         http_response_code(500);
+//         return ["error" => $e->getMessage()];
+//     } finally {
+//         close_db_connection($conn);
+//     }
+// }
 
 /**
  * Check if summary files exist for a story
@@ -322,9 +320,10 @@ if ($path === '/' || $path === '/index.php') {
     $story_id = $matches[1];
     
     // Get story details from database
-    $db = new SQLite3('hn_stories.db');
+    $db = new SQLite3(DB_PATH);
     $story = $db->querySingle("SELECT * FROM stories WHERE id = " . intval($story_id), true);
-    
+    $story['time_ago'] = format_time_ago((int)$story['timestamp']);
+
     if (!$story) {
         http_response_code(404);
         echo "Story not found";
@@ -358,62 +357,36 @@ if ($path === '/' || $path === '/index.php') {
     
     // Include the summary template
     include 'templates/summary.php';
-} elseif (preg_match('/^\/story-summary\/(\d+)$/', $path, $matches)) {
-    // Handle story summary requests
-    $story_id = $matches[1];
-    $summary_file = "static/content/{$story_id}-story-summary.md";
+// } elseif ($path === '/api/stories') {
+//     // API endpoint for stories
+//     header('Content-Type: application/json');
+//     header('Access-Control-Allow-Origin: *');
+//     header('Access-Control-Allow-Methods: GET, OPTIONS');
+//     header('Access-Control-Allow-Headers: Content-Type');
     
-    if (file_exists($summary_file)) {
-        // Set content type to markdown
-        header('Content-Type: text/markdown');
-        readfile($summary_file);
-    } else {
-        http_response_code(404);
-        echo "Story summary not found";
-    }
-} elseif (preg_match('/^\/comments-summary\/(\d+)$/', $path, $matches)) {
-    // Handle comments summary requests
-    $story_id = $matches[1];
-    $summary_file = "static/content/{$story_id}-comments-summary.md";
+//     // Handle preflight requests
+//     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+//         http_response_code(200);
+//         exit;
+//     }
     
-    if (file_exists($summary_file)) {
-        // Set content type to markdown
-        header('Content-Type: text/markdown');
-        readfile($summary_file);
-    } else {
-        http_response_code(404);
-        echo "Comments summary not found";
-    }
-} elseif ($path === '/api/stories') {
-    // API endpoint for stories
-    header('Content-Type: application/json');
-    header('Access-Control-Allow-Origin: *');
-    header('Access-Control-Allow-Methods: GET, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type');
+//     $stories = get_stories();
+//     echo json_encode($stories);
+//     debugLog("API stories returned " . count($stories) . " items");
+// } elseif ($path === '/api/stats') {
+//     // API endpoint for stats
+//     header('Content-Type: application/json');
+//     header('Access-Control-Allow-Origin: *');
+//     header('Access-Control-Allow-Methods: GET, OPTIONS');
+//     header('Access-Control-Allow-Headers: Content-Type');
     
-    // Handle preflight requests
-    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-        http_response_code(200);
-        exit;
-    }
+//     // Handle preflight requests
+//     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+//         http_response_code(200);
+//         exit;
+//     }
     
-    $stories = get_stories();
-    echo json_encode($stories);
-    debugLog("API stories returned " . count($stories) . " items");
-} elseif ($path === '/api/stats') {
-    // API endpoint for stats
-    header('Content-Type: application/json');
-    header('Access-Control-Allow-Origin: *');
-    header('Access-Control-Allow-Methods: GET, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type');
-    
-    // Handle preflight requests
-    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-        http_response_code(200);
-        exit;
-    }
-    
-    echo json_encode(get_stats());
+//     echo json_encode(get_stats());
 } elseif (strpos($path, '/static/') === 0) {
     // Serve static files
     $file = ltrim($path, '/');

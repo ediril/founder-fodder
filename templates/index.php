@@ -66,9 +66,9 @@
                             </a>
                         </p>
                         <p class="subtitle is-6">
-                            <span><i class="fas fa-globe"></i> <?php echo htmlspecialchars($story['domain']); ?></span>
-                            <span><i class="fa-solid fa-arrow-up"></i> <?php echo (int)$story['score']; ?></span>
-                            <span><i class="fa-regular fa-clock"></i> <?php echo htmlspecialchars($story['time_ago']); ?></span>
+                            <span><i class="fa-solid fa-clock"></i> <?php echo htmlspecialchars($story['time_ago']); ?></span>
+                            <span><i class="fas fa-globe pl-2"></i> <?php echo htmlspecialchars($story['domain']); ?></span>
+                            <span><i class="fa-solid fa-arrow-up pl-2"></i> <?php echo (int)$story['score']; ?></span>
                         </p>
                         <div class="story-actions">
                             <a href="<?php echo htmlspecialchars($story['comments_url']); ?>" class="button is-small pl-3">
