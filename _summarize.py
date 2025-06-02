@@ -26,7 +26,7 @@ class StorySummarizer:
     BASE_URL = "https://hacker-news.firebaseio.com/v0"
     ITEM_URL = f"{BASE_URL}/item"
     
-    def __init__(self, db_path="hn_stories.db", output_dir="static/content", originals_dir="static/_originals"):
+    def __init__(self, db_path="stories.db", output_dir="static/content", originals_dir="static/_originals"):
         """Initialize with database path and output directory"""
         self.db_path = db_path
         self.output_dir = output_dir
@@ -372,8 +372,8 @@ if __name__ == "__main__":
                         help='Type of stories to summarize (default: top)')
     parser.add_argument('--limit', type=int, default=-1,
                         help='Maximum number of stories to process (default: _all_)')
-    parser.add_argument('--db', default='hn_stories.db',
-                        help='Path to SQLite database (default: hn_stories.db)')
+    parser.add_argument('--db', default='stories.db',
+                        help='Path to SQLite database (default: stories.db)')
     parser.add_argument('--output', default='static/content',
                         help='Output directory for content files (default: static/content)')
     parser.add_argument('--download-only', action='store_true',
