@@ -24,6 +24,13 @@ const COMMENTS_SUMMARY_FILE = "comments-summary.md";
 // Directory constants
 const OUTPUT_DIR = "static/content";
 const ORIGINALS_DIR = "_originals";
+// Create these directories if they don't exist
+if (!is_dir(OUTPUT_DIR)) {
+    mkdir(OUTPUT_DIR, 0755, true);
+}
+if (!is_dir(ORIGINALS_DIR)) {
+    mkdir(ORIGINALS_DIR, 0755, true);
+}
 
 // Hacker News API endpoints
 const HN_BASE_URL = "https://hacker-news.firebaseio.com/v0";
@@ -37,8 +44,9 @@ class StorySummarizer {
     private $model;
     private $lockFile;
     private $lockHandle;
+    private $dryRun;
     
-    public function __construct($dbPath = DB_PATH, $outputDir = OUTPUT_DIR, $originalsDir = ORIGINALS_DIR) {
+    public function __construct($dbPath = DB_PATH, $outputDir = OUTPUT_DIR, $originalsDir = ORIGINALS_DIR, $dryRun = false) {
         // Initialize file locking first
         $this->initializeLock();
         
@@ -51,15 +59,22 @@ class StorySummarizer {
         $this->dbPath = $dbPath;
         $this->outputDir = $outputDir;
         $this->originalsDir = $originalsDir;
+        $this->dryRun = $dryRun;
         
-        $apiKey = $_SERVER['GEMINI_API_KEY'] ?? null;
-        if (!$apiKey) {
-            throw new Exception('GEMINI_API_KEY environment variable not found');
+        if ($dryRun) {
+            echo "DRY-RUN MODE: Will not send content to Gemini API\n";
+            $this->client = null;
+            $this->model = null;
+        } else {
+            $apiKey = $_SERVER['GEMINI_API_KEY'] ?? null;
+            if (!$apiKey) {
+                throw new Exception('GEMINI_API_KEY environment variable not found');
+            }
+            
+            // Initialize Gemini AI
+            $this->client = Gemini::client($apiKey);
+            $this->model = $this->client->generativeModel(model: 'gemini-2.0-flash-lite');
         }
-        
-        // Initialize Gemini AI
-        $this->client = Gemini::client($apiKey);
-        $this->model = $this->client->generativeModel(model: 'gemini-2.0-flash-lite');
         
         // Create directories if they don't exist
         if (!is_dir($this->outputDir)) {
@@ -416,6 +431,13 @@ class StorySummarizer {
                 $prompt = str_replace('{content}', $content, COMMENTS_PROMPT);
             }
             
+            if ($this->dryRun) {
+                $contentLength = strlen($content);
+                $promptLength = strlen($prompt);
+                echo "    [DRY-RUN] Would summarize {$promptType} content ({$contentLength} chars, prompt: {$promptLength} chars)\n";
+                return "DRY-RUN MODE: This would be a {$promptType} summary generated from {$contentLength} characters of content.";
+            }
+            
             $result = $this->model->generateContent($prompt);
             return $result->text();
             
@@ -486,16 +508,23 @@ class StorySummarizer {
                 if ($storySummary) {
                     $storySummary = $this->cleanupContent($storySummary);
                     
-                    // Save the story summary
-                    file_put_contents($summaryFile, $storySummary);
-                    echo "  Saved story summary to {$summaryFile}\n";
+                    if ($this->dryRun) {
+                        echo "  [DRY-RUN] Would save story summary to {$summaryFile}\n";
+                    } else {
+                        // Save the story summary
+                        file_put_contents($summaryFile, $storySummary);
+                        echo "  Saved story summary to {$summaryFile}\n";
+                        
+                        // Delete the original story content after successful summarization
+                        if (file_exists($storyFile)) {
+                            unlink($storyFile);
+                            echo "  Deleted original story content file\n";
+                        }
+                    }
                     
                     // Calculate and display elapsed time
                     $elapsedTime = microtime(true) - $startTime;
                     echo "  Story {$story['id']} summarized in " . number_format($elapsedTime, 2) . " sec\n";
-
-                    // Delete the original story content
-                    //unlink($storyFile);
                 }
             } else {
                 echo "  Story too short to summarize (length: " . strlen($storyContent) . ")\n";
@@ -524,16 +553,23 @@ class StorySummarizer {
                         if ($commentsSummary) {
                             $commentsSummary = $this->cleanupContent($commentsSummary);
                             
-                            // Save the comments summary
-                            file_put_contents($commentsSummaryFile, $commentsSummary);
-                            echo "  Saved comments summary to {$commentsSummaryFile}\n";
+                            if ($this->dryRun) {
+                                echo "  [DRY-RUN] Would save comments summary to {$commentsSummaryFile}\n";
+                            } else {
+                                // Save the comments summary
+                                file_put_contents($commentsSummaryFile, $commentsSummary);
+                                echo "  Saved comments summary to {$commentsSummaryFile}\n";
+                                
+                                // Delete the original comments content after successful summarization
+                                if (file_exists($commentsFile)) {
+                                    unlink($commentsFile);
+                                    echo "  Deleted original comments content file\n";
+                                }
+                            }
                             
                             // Calculate and display elapsed time
                             $elapsedTime = microtime(true) - $startTime;
                             echo "  Comments {$story['id']} summarized in " . number_format($elapsedTime, 2) . " sec\n";
-
-                            // Delete the original comments content
-                            //unlink($commentsFile);
                         }
                     }
                 }
@@ -615,6 +651,7 @@ if ($argc > 1) {
         'db:',
         'output:',
         'download-only',
+        'dry-run',
         'story-id:',
         'help'
     ]);
@@ -627,6 +664,7 @@ if ($argc > 1) {
         echo "  --db=PATH          Path to SQLite database [default: " . DB_PATH . "]\n";
         echo "  --output=PATH      Output directory for content files [default: " . OUTPUT_DIR . "]\n";
         echo "  --download-only    Download story and comments content without summarizing\n";
+        echo "  --dry-run          Process and show what would be summarized without calling Gemini API\n";
         echo "  --story-id=ID      Process a single story by ID\n";
         echo "  --help             Show this help message\n";
         exit(0);
@@ -637,10 +675,11 @@ if ($argc > 1) {
     $dbPath = $options['db'] ?? DB_PATH;
     $outputDir = $options['output'] ?? OUTPUT_DIR;
     $downloadOnly = isset($options['download-only']);
+    $dryRun = isset($options['dry-run']);
     $storyId = isset($options['story-id']) ? (int)$options['story-id'] : null;
     
     try {
-        $summarizer = new StorySummarizer($dbPath, $outputDir);
+        $summarizer = new StorySummarizer($dbPath, $outputDir, ORIGINALS_DIR, $dryRun);
         
         if ($storyId) {
             $summarizer->processStoryById($storyId, $downloadOnly);
@@ -670,5 +709,6 @@ if ($argc > 1) {
     echo "Usage: php summarize.php --help for options\n";
     echo "Example: php summarize.php --type=top --limit=5\n";
     echo "Example: php summarize.php --limit=10 (processes all types with 10 stories each)\n";
+    echo "Example: php summarize.php --dry-run --limit=5 (test mode without API calls)\n";
 }
 
