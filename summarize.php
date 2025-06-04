@@ -514,8 +514,16 @@ class StorySummarizer {
 
         $commentsSummaryFile = $this->outputDir . "/{$story['id']}-" . COMMENTS_SUMMARY_FILE;
         if (file_exists($commentsSummaryFile)) {
-            // TODO: Delete summary if older than 3 hours and story is younger than 1 day
-            return;
+            if ($story['fetched_at'] + 3600 * 72 < time()) {
+                // if it's been more than 72 hours, keep the summary
+                return;
+            }
+            $creationTime = filectime($commentsSummaryFile);
+            if ($creationTime + 3600 * 6 > time()) {
+                // if it's been less than 6 hours since creation, keep the summary
+                return;
+            }
+            unlink($commentsSummaryFile);
         }
 
         $commentsContent = "";
@@ -557,11 +565,11 @@ class StorySummarizer {
                 $commentsSummary = $this->cleanupContent($commentsSummary);
                 
                 if ($this->dryRun) {
-                    echo "  [DRY-RUN] Would save comments summary to {$commentsSummaryFile}\n";
+                    echo "  [DRY-RUN] Would save comments {$commentsCount} summary to {$commentsSummaryFile}\n";
                 } else {
                     // Save the comments summary
                     file_put_contents($commentsSummaryFile, $commentsSummary);
-                    echo "  Saved comments summary to {$commentsSummaryFile}\n";
+                    echo "  Saved {$commentsCount} comments summary\n";
                 }
                 
                 // Calculate and display elapsed time
@@ -582,7 +590,7 @@ class StorySummarizer {
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             
             $stmt = $pdo->prepare('
-                SELECT id, title, url, domain, comments_url, comments_count
+                SELECT id, title, url, domain, comments_url, comments_count, fetched_at
                 FROM stories
                 WHERE type = ?
                 ORDER BY ranking
@@ -694,7 +702,7 @@ if ($argc > 1) {
             }
         }
 
-        // TODO: Delete stories, comments and their summaries if they were fetched over 1 month ago
+        // TODO: Delete stories, comments and summaries if they were fetched over 6 months ago
         
     } catch (Exception $e) {
         echo "ERROR: " . $e->getMessage() . "\n";
