@@ -446,133 +446,127 @@ class StorySummarizer {
             return null;
         }
     }
-    
-    /**
-     * Process a single story: download content, summarize if needed
-     */
+
     public function processStory($story, $downloadOnly = false, $storyType = null) {
         echo "Processing story {$story['id']}\n";
-        
-        // Download story content
+
+        $storySummaryFile = $this->outputDir . "/{$story['id']}-" . STORY_SUMMARY_FILE;
+        if (file_exists($storySummaryFile)) {
+            return;
+        }
+
         $storyContent = "";
         $storyFile = $this->originalsDir . "/{$story['id']}-story.txt";
-        if ($story['url'] && !file_exists($storyFile)) {
+        if (!file_exists($storyFile) && $story['url']) {
             echo "Fetching story...\n";
             $storyContent = $this->fetchStoryContent($story['url']);
             
-            // Save original content
-            if ($storyContent) {
+            if (strlen($storyContent) > 750) {
                 file_put_contents($storyFile, $storyContent);
-                echo "Saved story...\n";
+                echo "Saved story to {$storyFile}\n";
+            } else {
+                echo "Story is too short to summarize (length: " . strlen($storyContent) . ")\n";
+                file_put_contents($storySummaryFile, "");
+                return;
             }
         }
         
-        // For "new" stories, skip comments processing entirely
-        if ($storyType !== 'new') {
-            // Download comments only if we don't have them and there are enough comments
-            $commentsCount = (int)($story['comments_count'] ?? 0);
-            $commentsContent = "";
-            $commentsFile = $this->originalsDir . "/{$story['id']}-comments.txt";
-            if ($commentsCount > 10) {
-                if ($story['comments_url'] && !file_exists($commentsFile)) {
-                    echo "Fetching comments (enough comments to warrant downloading)...\n";
-                    $commentsContent = $this->fetchComments($story['comments_url']);
-                    if ($commentsContent) {
-                        file_put_contents($commentsFile, $commentsContent);
-                        echo "Comments saved...\n";
-                    }
-                }
-            } else {
-                echo "  Not enough comments to summarize ({$commentsCount})\n";
-            }
-        }
-
         if ($downloadOnly) {
-            echo "  Download-only mode: skipping summarization for story {$story['id']}\n";
+            echo "  Download-only mode: skipping summarization\n";
             return;
         }
-        
+
         if (!$storyContent && file_exists($storyFile)) {
             $storyContent = file_get_contents($storyFile);
             echo "Loaded existing story content...\n";
         }
-        
-        $summaryFile = $this->outputDir . "/{$story['id']}-" . STORY_SUMMARY_FILE;
-        if ($storyContent && !file_exists($summaryFile)) {
-            // Only summarize if story content is substantial (more than 1000 characters)
-            if (strlen($storyContent) > 750) {
-                echo "  Summarizing story (length: " . strlen($storyContent) . ")...\n";
-                $startTime = microtime(true);
+
+        if ($storyContent) {
+            echo "  Summarizing story (length: " . strlen($storyContent) . ")...\n";
+            $startTime = microtime(true);
+            
+            $storySummary = $this->summarize($storyContent, "story");
+            if ($storySummary) {
+                $storySummary = $this->cleanupContent($storySummary);
                 
-                $storySummary = $this->summarize($storyContent, "story");
-                if ($storySummary) {
-                    $storySummary = $this->cleanupContent($storySummary);
-                    
-                    if ($this->dryRun) {
-                        echo "  [DRY-RUN] Would save story summary to {$summaryFile}\n";
-                    } else {
-                        // Save the story summary
-                        file_put_contents($summaryFile, $storySummary);
-                        echo "  Saved story summary to {$summaryFile}\n";
-                        
-                        // Delete the original story content after successful summarization
-                        if (file_exists($storyFile)) {
-                            unlink($storyFile);
-                            echo "  Deleted original story content file\n";
-                        }
-                    }
-                    
-                    // Calculate and display elapsed time
-                    $elapsedTime = microtime(true) - $startTime;
-                    echo "  Story {$story['id']} summarized in " . number_format($elapsedTime, 2) . " sec\n";
+                if ($this->dryRun) {
+                    echo "  [DRY-RUN] Would save story summary to {$storySummaryFile}\n";
+                } else {
+                    // Save the story summary
+                    file_put_contents($storySummaryFile, $storySummary);
+                    echo "  Saved story summary to {$storySummaryFile}\n";
                 }
-            } else {
-                echo "  Story too short to summarize (length: " . strlen($storyContent) . ")\n";
+                
+                // Calculate and display elapsed time
+                $elapsedTime = microtime(true) - $startTime;
+                echo "  Story {$story['id']} summarized in " . number_format($elapsedTime, 2) . " sec\n";
             }
         }
-        
-        // Generate comments summary only if story type is not "new" and we have enough comments
-        if ($storyType !== 'new') {
+    }
+
+    public function processComments($story, $downloadOnly = false, $storyType = null) {
+        echo "Processing comments for story {$story['id']}\n";
+
+        if ($storyType == 'new') {
+            echo "  Skipping comments processing for new stories\n";
+            return;
+        }
+
+        $commentsSummaryFile = $this->outputDir . "/{$story['id']}-" . COMMENTS_SUMMARY_FILE;
+        if (file_exists($commentsSummaryFile)) {
+            // TODO: Delete summary if older than 3 hours and story is younger than 1 day
+            return;
+        }
+
+        $commentsContent = "";
+        $commentsFile = $this->originalsDir . "/{$story['id']}-comments.txt";
+        if (!file_exists($commentsFile) && $story['comments_url']) {
             $commentsCount = (int)($story['comments_count'] ?? 0);
-            
             if ($commentsCount > 10) {
-                $commentsContent = "";
-                $commentsFile = $this->originalsDir . "/{$story['id']}-comments.txt";
-                if (!$commentsContent && file_exists($commentsFile)) {
-                    $commentsContent = file_get_contents($commentsFile);
-                    echo "Loaded existing comments content...\n";
+                echo "Fetching comments ({$commentsCount})...\n";
+                $commentsContent = $this->fetchComments($story['comments_url']);
+                if ($commentsContent) {
+                    file_put_contents($commentsFile, $commentsContent);
+                    echo "Comments saved...\n";
+                } else {
+                    echo "Failed to fetch comments\n";
+                    return;
+                }
+            } else {
+                echo "Not enough comments to summarize ({$commentsCount})\n";
+                return;
+            }
+        }
+
+        if ($downloadOnly) {
+            echo "  Download-only mode: skipping summarization\n";
+            return;
+        }
+        
+        if (!$commentsContent && file_exists($commentsFile)) {
+            $commentsContent = file_get_contents($commentsFile);
+            echo "Loaded existing comments ...\n";
+        }
+
+        if ($commentsContent) {
+            echo "  Summarizing comments (count: {$commentsCount})...\n";
+            $startTime = microtime(true);
+            
+            $commentsSummary = $this->summarize($commentsContent, "comments");
+            if ($commentsSummary) {
+                $commentsSummary = $this->cleanupContent($commentsSummary);
+                
+                if ($this->dryRun) {
+                    echo "  [DRY-RUN] Would save comments summary to {$commentsSummaryFile}\n";
+                } else {
+                    // Save the comments summary
+                    file_put_contents($commentsSummaryFile, $commentsSummary);
+                    echo "  Saved comments summary to {$commentsSummaryFile}\n";
                 }
                 
-                if ($commentsContent) {
-                    $commentsSummaryFile = $this->outputDir . "/{$story['id']}-" . COMMENTS_SUMMARY_FILE;
-                    if (!file_exists($commentsSummaryFile)) {
-                        echo "  Summarizing comments (count: {$commentsCount})...\n";
-                        $startTime = microtime(true);
-                        
-                        $commentsSummary = $this->summarize($commentsContent, "comments");
-                        if ($commentsSummary) {
-                            $commentsSummary = $this->cleanupContent($commentsSummary);
-                            
-                            if ($this->dryRun) {
-                                echo "  [DRY-RUN] Would save comments summary to {$commentsSummaryFile}\n";
-                            } else {
-                                // Save the comments summary
-                                file_put_contents($commentsSummaryFile, $commentsSummary);
-                                echo "  Saved comments summary to {$commentsSummaryFile}\n";
-                                
-                                // Delete the original comments content after successful summarization
-                                if (file_exists($commentsFile)) {
-                                    unlink($commentsFile);
-                                    echo "  Deleted original comments content file\n";
-                                }
-                            }
-                            
-                            // Calculate and display elapsed time
-                            $elapsedTime = microtime(true) - $startTime;
-                            echo "  Comments {$story['id']} summarized in " . number_format($elapsedTime, 2) . " sec\n";
-                        }
-                    }
-                }
+                // Calculate and display elapsed time
+                $elapsedTime = microtime(true) - $startTime;
+                echo "  Comments for story {$story['id']} summarized in " . number_format($elapsedTime, 2) . " sec\n";
             }
         }
     }
@@ -598,6 +592,7 @@ class StorySummarizer {
             $storyCnt = 0;
             while ($story = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 $this->processStory($story, $downloadOnly, $storyType);
+                $this->processComments($story, $downloadOnly, $storyType);
                 
                 $storyCnt++;
                 if ($limit > 0 && $storyCnt == $limit) {
@@ -633,6 +628,7 @@ class StorySummarizer {
             $story = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($story) {
                 $this->processStory($story, $downloadOnly, $story['type']);
+                $this->processComments($story, $downloadOnly, $story['type']);
             } else {
                 echo "Story ID {$storyId} not found in database.\n";
             }
@@ -697,8 +693,8 @@ if ($argc > 1) {
                 $summarizer->run($storyType, $limit, $downloadOnly);
             }
         }
-        
-        echo "Script completed successfully.\n";
+
+        // TODO: Delete stories, comments and their summaries if they were fetched over 1 month ago
         
     } catch (Exception $e) {
         echo "ERROR: " . $e->getMessage() . "\n";
