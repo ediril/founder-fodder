@@ -622,8 +622,8 @@ if ($argc > 1) {
     if (isset($options['help'])) {
         echo "Usage: php summarize.php [options]\n";
         echo "Options:\n";
-        echo "  --type=TYPE        Type of stories to summarize (top, new, best) [default: top]\n";
-        echo "  --limit=N          Maximum number of stories to process [default: 10]\n";
+        echo "  --type=TYPE        Type of stories to summarize (top, new, best, all) [default: all]\n";
+        echo "  --limit=N          Maximum number of stories to process per type [default: 100]\n";
         echo "  --db=PATH          Path to SQLite database [default: " . DB_PATH . "]\n";
         echo "  --output=PATH      Output directory for content files [default: " . OUTPUT_DIR . "]\n";
         echo "  --download-only    Download story and comments content without summarizing\n";
@@ -632,8 +632,8 @@ if ($argc > 1) {
         exit(0);
     }
     
-    $storyType = $options['type'] ?? 'top';
-    $limit = isset($options['limit']) ? (int)$options['limit'] : 10;
+    $storyType = $options['type'] ?? 'all';
+    $limit = isset($options['limit']) ? (int)$options['limit'] : 100;
     $dbPath = $options['db'] ?? DB_PATH;
     $outputDir = $options['output'] ?? OUTPUT_DIR;
     $downloadOnly = isset($options['download-only']);
@@ -645,7 +645,18 @@ if ($argc > 1) {
         if ($storyId) {
             $summarizer->processStoryById($storyId, $downloadOnly);
         } else {
-            $summarizer->run($storyType, $limit, $downloadOnly);
+            if ($storyType === 'all') {
+                // Process all story types with the limit applying to each type
+                $types = ['top', 'new', 'best'];
+                foreach ($types as $type) {
+                    echo "\n=== Processing {$type} stories ===\n";
+                    $summarizer->run($type, $limit, $downloadOnly);
+                }
+                echo "\n=== Completed processing all story types ===\n";
+            } else {
+                // Process single story type
+                $summarizer->run($storyType, $limit, $downloadOnly);
+            }
         }
         
         echo "Script completed successfully.\n";
@@ -658,5 +669,6 @@ if ($argc > 1) {
     echo "Story Summarizer\n";
     echo "Usage: php summarize.php --help for options\n";
     echo "Example: php summarize.php --type=top --limit=5\n";
+    echo "Example: php summarize.php --limit=10 (processes all types with 10 stories each)\n";
 }
 
