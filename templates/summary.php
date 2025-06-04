@@ -50,10 +50,13 @@ error_reporting(E_ALL & ~E_DEPRECATED);
             <div class="content">
                 <?php if ($has_story_summary): ?>
                 <div class="box summary-card">
-                    <h2 class="title is-4 has-text-weight-bold">
+                    <h2 class="is-4 has-text-weight-bold">
                         <span class="icon has-text-primary"><i class="fa-regular fa-file-lines"></i></span>
                         Story Summary
                     </h2>
+                    <div class="summary-last-updated">                        
+                        <p class="has-text-grey-light">Last updated: <?php echo htmlspecialchars($story_summary_last_updated); ?></p>
+                    </div>
                     <div class="summary-content markdown-body">
                         <?php 
                         // Convert Markdown to HTML using Parsedown
@@ -66,10 +69,13 @@ error_reporting(E_ALL & ~E_DEPRECATED);
                 
                 <?php if ($has_comments_summary): ?>
                 <div class="box summary-card">
-                    <h2 class="title is-4 has-text-weight-bold">
+                    <h2 class="is-4 has-text-weight-bold">
                         <span class="icon has-text-primary"><i class="fa-regular fa-comments"></i></span>
                         Comments Summary
                     </h2>
+                    <div class="summary-last-updated">                        
+                        <p class="has-text-grey-light">Last updated: <?php echo htmlspecialchars($comments_summary_last_updated); ?></p>
+                    </div>
                     <div class="summary-content markdown-body">
                         <?php 
                         // Convert Markdown to HTML using Parsedown

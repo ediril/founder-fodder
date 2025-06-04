@@ -246,47 +246,6 @@ function get_page_stories(string $story_type = 'top', int $page = 1, int $per_pa
 }
 
 /**
- * Get statistics about stored stories
- */
-// function get_stats(): array {
-//     try {
-//         $conn = get_db_connection();
-        
-//         // Count stories by type
-//         $stmt = $conn->query('
-//             SELECT type, COUNT(*) as count
-//             FROM stories
-//             GROUP BY type
-//         ');
-        
-//         $type_counts = [];
-//         while ($row = $stmt->fetch()) {
-//             $type_counts[$row['type']] = (int)$row['count'];
-//         }
-        
-//         // Get most recent fetch time
-//         $stmt = $conn->query('SELECT MAX(fetched_at) as last_fetch FROM stories');
-//         $result = $stmt->fetch();
-//         $last_fetch = $result['last_fetch'];
-        
-//         // Format time ago
-//         $last_fetch_ago = $last_fetch ? format_time_ago((int)$last_fetch) : 'never';
-        
-//         return [
-//             'counts' => $type_counts,
-//             'total' => array_sum($type_counts),
-//             'last_fetch' => $last_fetch,
-//             'last_fetch_ago' => $last_fetch_ago
-//         ];
-//     } catch (Exception $e) {
-//         http_response_code(500);
-//         return ["error" => $e->getMessage()];
-//     } finally {
-//         close_db_connection($conn);
-//     }
-// }
-
-/**
  * Check if image files exist for multiple stories at once
  */
 function batch_check_image_files(array $story_ids): array {
@@ -413,39 +372,13 @@ if ($path === '/' || $path === '/index.php') {
     if ($has_comments_summary) {
         $comments_summary = file_get_contents($comments_summary_file);
     }
+
+    $story_summary_last_updated = format_time_ago(filectime($story_summary_file));
+    $comments_summary_last_updated = format_time_ago(filectime($comments_summary_file));
     
     // Include the summary template
     include 'templates/summary.php';
-// } elseif ($path === '/api/stories') {
-//     // API endpoint for stories
-//     header('Content-Type: application/json');
-//     header('Access-Control-Allow-Origin: *');
-//     header('Access-Control-Allow-Methods: GET, OPTIONS');
-//     header('Access-Control-Allow-Headers: Content-Type');
-    
-//     // Handle preflight requests
-//     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-//         http_response_code(200);
-//         exit;
-//     }
-    
-//     $stories = get_stories();
-//     echo json_encode($stories);
-//     debugLog("API stories returned " . count($stories) . " items");
-// } elseif ($path === '/api/stats') {
-//     // API endpoint for stats
-//     header('Content-Type: application/json');
-//     header('Access-Control-Allow-Origin: *');
-//     header('Access-Control-Allow-Methods: GET, OPTIONS');
-//     header('Access-Control-Allow-Headers: Content-Type');
-    
-//     // Handle preflight requests
-//     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-//         http_response_code(200);
-//         exit;
-//     }
-    
-//     echo json_encode(get_stats());
+
 } elseif (strpos($path, '/static/') === 0) {
     // Serve static files
     $file = ltrim($path, '/');
