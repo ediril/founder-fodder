@@ -451,13 +451,17 @@ class StorySummarizer {
             $commentsCount = (int)($story['comments_count'] ?? 0);
             $commentsContent = "";
             $commentsFile = $this->originalsDir . "/{$story['id']}-comments.txt";
-            if ($commentsCount > 10 && $story['comments_url'] && !file_exists($commentsFile)) {
-                echo "Fetching comments (enough comments to warrant downloading)...\n";
-                $commentsContent = $this->fetchComments($story['comments_url']);
-                if ($commentsContent) {
-                    file_put_contents($commentsFile, $commentsContent);
-                    echo "Comments saved...\n";
+            if ($commentsCount > 10) {
+                if ($story['comments_url'] && !file_exists($commentsFile)) {
+                    echo "Fetching comments (enough comments to warrant downloading)...\n";
+                    $commentsContent = $this->fetchComments($story['comments_url']);
+                    if ($commentsContent) {
+                        file_put_contents($commentsFile, $commentsContent);
+                        echo "Comments saved...\n";
+                    }
                 }
+            } else {
+                echo "  Not enough comments to summarize ({$commentsCount})\n";
             }
         }
 
@@ -493,6 +497,8 @@ class StorySummarizer {
                     // Delete the original story content
                     //unlink($storyFile);
                 }
+            } else {
+                echo "  Story too short to summarize (length: " . strlen($storyContent) . ")\n";
             }
         }
         
