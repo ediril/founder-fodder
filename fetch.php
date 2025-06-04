@@ -20,18 +20,83 @@ class HackerNewsFetcher
 
     private string $dbPath;
     private string $imgDir;
+    private string $lockFile;
+    private $lockHandle;
     private \PDO $pdo;
 
     public function __construct(string $dbPath = DB_PATH, string $imgDir = "static/img/stories")
     {
         $this->dbPath = $dbPath;
         $this->imgDir = $imgDir;
+        $this->lockFile = sys_get_temp_dir() . '/hackernews_fetcher.lock';
+        
+        // Check if another instance is running
+        if (!$this->acquireLock()) {
+            echo "Another instance of the fetcher is already running. Exiting.\n";
+            exit(1);
+        }
+        
+        // Set up signal handlers for cleanup
+        if (function_exists('pcntl_signal')) {
+            pcntl_signal(SIGTERM, [$this, 'handleSignal']);
+            pcntl_signal(SIGINT, [$this, 'handleSignal']);
+        }
+        
+        // Set up shutdown function for cleanup
+        register_shutdown_function([$this, 'cleanup']);
+        
         $this->initDb();
         
         // Ensure image directory exists
         if (!is_dir($this->imgDir)) {
             mkdir($this->imgDir, 0755, true);
         }
+    }
+
+    public function __destruct()
+    {
+        $this->cleanup();
+    }
+
+    private function acquireLock(): bool
+    {
+        $this->lockHandle = fopen($this->lockFile, 'w');
+        if (!$this->lockHandle) {
+            return false;
+        }
+        
+        // Try to get an exclusive lock
+        if (!flock($this->lockHandle, LOCK_EX | LOCK_NB)) {
+            fclose($this->lockHandle);
+            $this->lockHandle = null;
+            return false;
+        }
+        
+        // Write PID to lock file
+        fwrite($this->lockHandle, getmypid());
+        fflush($this->lockHandle);
+        
+        return true;
+    }
+
+    public function cleanup(): void
+    {
+        if ($this->lockHandle) {
+            flock($this->lockHandle, LOCK_UN);
+            fclose($this->lockHandle);
+            $this->lockHandle = null;
+        }
+        
+        if (file_exists($this->lockFile)) {
+            @unlink($this->lockFile);
+        }
+    }
+
+    public function handleSignal(int $signal): void
+    {
+        echo "\nReceived signal {$signal}. Cleaning up and exiting...\n";
+        $this->cleanup();
+        exit(0);
     }
 
     private function initDb(): void
