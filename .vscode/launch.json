@@ -22,6 +22,16 @@
             }
           },
           {
+            "name": "Listen for Xdebug (CLI)",
+            "type": "php",
+            "request": "launch", 
+            "port": 9003,
+            "pathMappings": {},
+            "ignore": [
+                "**/vendor/**/*.php"
+            ]
+          },
+          {
             "name": "Launch Built-in Server",
             "type": "php",
             "request": "launch",

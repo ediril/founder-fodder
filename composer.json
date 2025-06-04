@@ -1,5 +1,15 @@
 {
     "require": {
-        "erusev/parsedown": "^1.7"
+        "erusev/parsedown": "^1.7",
+        "vlucas/phpdotenv": "^5.6",
+        "symfony/http-client": "^7.3",
+        "nyholm/psr7": "^1.8",
+        "psr/http-client": "^1.0",
+        "google-gemini-php/client": "^2.2"
+    },
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
     }
-} 
+}

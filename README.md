@@ -11,6 +11,13 @@ $ php fetch.php --type=top --limit=50
 # How to summarize new content
 TODO
 
+## To debug:
+- Start the "Listen for Xdebug" session in VS Code (select "Listen for Xdebug" and press F5).
+- Then, from your terminal, run your PHP script with the desired CLI arguments and Xdebug environment variables, like so:
+```
+php <script.php> [args]
+```
+
 # How to deploy new content
 TODO
 
