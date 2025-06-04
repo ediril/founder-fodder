@@ -35,8 +35,19 @@ class StorySummarizer {
     private $originalsDir;
     private $client;
     private $model;
+    private $lockFile;
+    private $lockHandle;
     
     public function __construct($dbPath = DB_PATH, $outputDir = OUTPUT_DIR, $originalsDir = ORIGINALS_DIR) {
+        // Initialize file locking first
+        $this->initializeLock();
+        
+        // Set up signal handlers for cleanup
+        if (function_exists('pcntl_signal')) {
+            pcntl_signal(SIGTERM, [$this, 'handleSignal']);
+            pcntl_signal(SIGINT, [$this, 'handleSignal']);
+        }
+        
         $this->dbPath = $dbPath;
         $this->outputDir = $outputDir;
         $this->originalsDir = $originalsDir;
@@ -60,13 +71,101 @@ class StorySummarizer {
     }
     
     /**
+     * Initialize file locking to prevent multiple instances
+     */
+    private function initializeLock() {
+        $this->lockFile = sys_get_temp_dir() . '/story_summarizer.lock';
+        
+        // Try to open the lock file
+        $this->lockHandle = fopen($this->lockFile, 'c');
+        if (!$this->lockHandle) {
+            throw new Exception("Cannot create lock file: {$this->lockFile}");
+        }
+        
+        // Try to acquire an exclusive lock
+        if (!flock($this->lockHandle, LOCK_EX | LOCK_NB)) {
+            fclose($this->lockHandle);
+            throw new Exception("Another instance of the story summarizer is already running. Lock file: {$this->lockFile}");
+        }
+        
+        // Write current process ID to the lock file
+        ftruncate($this->lockHandle, 0);
+        fwrite($this->lockHandle, getmypid() . "\n" . date('Y-m-d H:i:s') . "\n");
+        fflush($this->lockHandle);
+        
+        // Register shutdown function to clean up lock
+        register_shutdown_function([$this, 'releaseLock']);
+        
+        echo "Acquired process lock (PID: " . getmypid() . ")\n";
+    }
+    
+    /**
+     * Release the file lock
+     */
+    public function releaseLock() {
+        if ($this->lockHandle) {
+            flock($this->lockHandle, LOCK_UN);
+            fclose($this->lockHandle);
+            $this->lockHandle = null;
+            
+            // Remove the lock file
+            if (file_exists($this->lockFile)) {
+                unlink($this->lockFile);
+            }
+            
+            echo "Released process lock\n";
+        }
+    }
+    
+    /**
+     * Handle signals for graceful shutdown
+     */
+    public function handleSignal(int $signal): void
+    {
+        echo "\nReceived signal {$signal}. Cleaning up and exiting...\n";
+        $this->releaseLock();
+        exit(0);
+    }
+    
+    /**
+     * Destructor to ensure lock is released
+     */
+    public function __destruct() {
+        $this->releaseLock();
+    }
+    
+    /**
      * Decode HTML entities in text to their corresponding characters
      */
     private function decodeHtmlEntities($text) {
-        if (!$text) {
-            return $text;
-        }
         return html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+    
+    /**
+     * Centralized HTTP request method with signal handling
+     */
+    private function fetchUrl(string $url, int $timeout = 10, array $headers = []): string|false
+    {
+        $defaultHeaders = [
+            'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        ];
+        
+        $allHeaders = array_merge($defaultHeaders, $headers);
+        
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'header' => implode("\r\n", $allHeaders),
+                'timeout' => $timeout
+            ]
+        ]);
+
+        // Dispatch signals before making the request
+        if (function_exists('pcntl_signal_dispatch')) {
+            pcntl_signal_dispatch();
+        }
+
+        return @file_get_contents($url, false, $context);
     }
     
     /**
@@ -78,15 +177,7 @@ class StorySummarizer {
         }
         
         try {
-            $context = stream_context_create([
-                'http' => [
-                    'method' => 'GET',
-                    'header' => 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                    'timeout' => 10
-                ]
-            ]);
-            
-            $content = file_get_contents($url, false, $context);
+            $content = $this->fetchUrl($url);
             if ($content === false) {
                 return "Failed to fetch content from URL.";
             }
@@ -143,7 +234,7 @@ class StorySummarizer {
     private function fetchComment($commentId) {
         try {
             $url = HN_ITEM_URL . "/{$commentId}.json";
-            $content = file_get_contents($url);
+            $content = $this->fetchUrl($url);
             if ($content === false) {
                 return null;
             }
@@ -232,7 +323,7 @@ class StorySummarizer {
         
         // Fetch the story details to get the top-level comment IDs
         $url = HN_ITEM_URL . "/{$storyId}.json";
-        $content = file_get_contents($url);
+        $content = $this->fetchUrl($url);
         if ($content === false) {
             return "Failed to fetch story details.";
         }
@@ -316,9 +407,6 @@ class StorySummarizer {
         return implode("\n", $cleanedLines);
     }
     
-    /**
-     * Use Gemini AI to summarize content
-     */
     private function summarize($content, $promptType) {
         try {
             // Define prompts based on content type
@@ -332,7 +420,7 @@ class StorySummarizer {
             return $result->text();
             
         } catch (Exception $e) {
-            echo "ERROR: Gemini API error during summarization: " . $e->getMessage() . "\n";
+            echo "ERROR during summarization: " . $e->getMessage() . "\n";
             return null;
         }
     }
@@ -340,7 +428,7 @@ class StorySummarizer {
     /**
      * Process a single story: download content, summarize if needed
      */
-    public function processStory($story, $downloadOnly = false) {
+    public function processStory($story, $downloadOnly = false, $storyType = null) {
         echo "Processing story {$story['id']}\n";
         
         // Download story content
@@ -357,18 +445,21 @@ class StorySummarizer {
             }
         }
         
-        // Download comments
-        $commentsContent = "";
-        $commentsFile = $this->originalsDir . "/{$story['id']}-comments.txt";
-        if ($story['comments_url'] && !file_exists($commentsFile)) {
-            echo "Fetching comments...\n";
-            $commentsContent = $this->fetchComments($story['comments_url']);
-            if ($commentsContent) {
-                file_put_contents($commentsFile, $commentsContent);
-                echo "Comments saved...\n";
+        // For "new" stories, skip comments processing entirely
+        if ($storyType !== 'new') {
+            // Download comments
+            $commentsContent = "";
+            $commentsFile = $this->originalsDir . "/{$story['id']}-comments.txt";
+            if ($story['comments_url'] && !file_exists($commentsFile)) {
+                echo "Fetching comments...\n";
+                $commentsContent = $this->fetchComments($story['comments_url']);
+                if ($commentsContent) {
+                    file_put_contents($commentsFile, $commentsContent);
+                    echo "Comments saved...\n";
+                }
             }
         }
-        
+
         if ($downloadOnly) {
             echo "  Download-only mode: skipping summarization for story {$story['id']}\n";
             return;
@@ -402,38 +493,40 @@ class StorySummarizer {
             }
         }
         
-        // Generate comments summary if needed and we have comments
-        if (!$commentsContent && file_exists($commentsFile)) {
-            $commentsContent = file_get_contents($commentsFile);
-            echo "Loaded existing comments content...\n";
-        }
-        
-        if ($commentsContent && strlen($commentsContent) > 1000) {
-            $commentsSummaryFile = $this->outputDir . "/{$story['id']}-" . COMMENTS_SUMMARY_FILE;
-            if (!file_exists($commentsSummaryFile)) {
-                echo "  Summarizing comments...\n";
-                $startTime = microtime(true);
-                
-                $commentsSummary = $this->summarize($commentsContent, "comments");
-                if ($commentsSummary) {
-                    $commentsSummary = $this->cleanupContent($commentsSummary);
+        // Generate comments summary only if story type is not "new"
+        if ($storyType !== 'new') {
+            // Generate comments summary if needed and we have comments
+            $commentsContent = "";
+            $commentsFile = $this->originalsDir . "/{$story['id']}-comments.txt";
+            if (!$commentsContent && file_exists($commentsFile)) {
+                $commentsContent = file_get_contents($commentsFile);
+                echo "Loaded existing comments content...\n";
+            }
+            
+            if ($commentsContent && strlen($commentsContent) > 1000) {
+                $commentsSummaryFile = $this->outputDir . "/{$story['id']}-" . COMMENTS_SUMMARY_FILE;
+                if (!file_exists($commentsSummaryFile)) {
+                    echo "  Summarizing comments...\n";
+                    $startTime = microtime(true);
                     
-                    // Save the comments summary
-                    file_put_contents($commentsSummaryFile, $commentsSummary);
-                    echo "  Saved comments summary to {$commentsSummaryFile}\n";
-                    
-                    // Calculate and display elapsed time
-                    $elapsedTime = microtime(true) - $startTime;
-                    echo "  Comments {$story['id']} summarized in " . number_format($elapsedTime, 2) . " sec\n";
+                    $commentsSummary = $this->summarize($commentsContent, "comments");
+                    if ($commentsSummary) {
+                        $commentsSummary = $this->cleanupContent($commentsSummary);
+                        
+                        // Save the comments summary
+                        file_put_contents($commentsSummaryFile, $commentsSummary);
+                        echo "  Saved comments summary to {$commentsSummaryFile}\n";
+                        
+                        // Calculate and display elapsed time
+                        $elapsedTime = microtime(true) - $startTime;
+                        echo "  Comments {$story['id']} summarized in " . number_format($elapsedTime, 2) . " sec\n";
 
-                    // Delete the original comments content
-                    //unlink($commentsFile);
+                        // Delete the original comments content
+                        //unlink($commentsFile);
+                    }
                 }
             }
         }
-        
-        // Sleep to be nice to APIs and servers
-        sleep(1);
     }
     
     /**
@@ -456,12 +549,15 @@ class StorySummarizer {
             
             $storyCnt = 0;
             while ($story = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                $this->processStory($story, $downloadOnly);
+                $this->processStory($story, $downloadOnly, $storyType);
                 
                 $storyCnt++;
                 if ($limit > 0 && $storyCnt == $limit) {
                     break;
                 }
+
+                // Sleep to be nice to APIs and servers
+                sleep(2);
             }
             
             echo "Completed processing of {$storyCnt} stories.\n";
@@ -480,7 +576,7 @@ class StorySummarizer {
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             
             $stmt = $pdo->prepare('
-                SELECT id, title, url, domain, comments_url
+                SELECT id, title, url, domain, comments_url, type
                 FROM stories
                 WHERE id = ?
             ');
@@ -488,7 +584,7 @@ class StorySummarizer {
             
             $story = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($story) {
-                $this->processStory($story, $downloadOnly);
+                $this->processStory($story, $downloadOnly, $story['type']);
             } else {
                 echo "Story ID {$storyId} not found in database.\n";
             }
@@ -531,12 +627,20 @@ if ($argc > 1) {
     $downloadOnly = isset($options['download-only']);
     $storyId = isset($options['story-id']) ? (int)$options['story-id'] : null;
     
-    $summarizer = new StorySummarizer($dbPath, $outputDir);
-    
-    if ($storyId) {
-        $summarizer->processStoryById($storyId, $downloadOnly);
-    } else {
-        $summarizer->run($storyType, $limit, $downloadOnly);
+    try {
+        $summarizer = new StorySummarizer($dbPath, $outputDir);
+        
+        if ($storyId) {
+            $summarizer->processStoryById($storyId, $downloadOnly);
+        } else {
+            $summarizer->run($storyType, $limit, $downloadOnly);
+        }
+        
+        echo "Script completed successfully.\n";
+        
+    } catch (Exception $e) {
+        echo "ERROR: " . $e->getMessage() . "\n";
+        exit(1);
     }
 } else {
     echo "Story Summarizer\n";
