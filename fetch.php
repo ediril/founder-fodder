@@ -495,6 +495,27 @@ class HackerNewsFetcher
     }
 
     /**
+     * Fetch and store a single story by ID
+     */
+    public function fetchStoryById(int $storyId): bool
+    {
+        echo "Fetching story {$storyId}...\n";
+        
+        $story = $this->fetchStoryDetails($storyId);
+        if (!$story) {
+            echo "Story {$storyId} not found or could not be fetched\n";
+            return false;
+        }
+
+        // For single story fetch, we don't have ranking context, so use 0
+        // and don't shift existing rankings
+        $this->storeStory($story, 'byid', 0);
+        
+        echo "Successfully fetched and stored story {$storyId}\n";
+        return true;
+    }
+
+    /**
      * Remove images from static/img/stories that don't exist in the database.
      */
     function cleanupUnusedImages(): void
@@ -588,7 +609,7 @@ if (!function_exists('array_any')) {
 // Command line interface
 if (php_sapi_name() === 'cli') {
     // Define valid options
-    $validOptions = ['type:', 'limit:', 'db:', 'help'];
+    $validOptions = ['type:', 'limit:', 'db:', 'story-id:', 'help'];
     $options = getopt('', $validOptions);
     
     // Check for unknown arguments by comparing $argv with parsed options
@@ -632,6 +653,7 @@ if (php_sapi_name() === 'cli') {
         echo "  --type=TYPE     Type of stories to fetch: top, new, best, all (default: all)\n";
         echo "  --limit=LIMIT   Maximum number of stories to fetch per type (default: 100)\n";
         echo "  --db=PATH       Path to SQLite database (default: stories.db)\n";
+        echo "  --story-id=ID   Fetch a single story by ID\n";
         echo "  --help          Show this help message\n";
         exit(0);
     }
@@ -639,6 +661,7 @@ if (php_sapi_name() === 'cli') {
     $type = $options['type'] ?? 'all';
     $limit = (int)($options['limit'] ?? 100);
     $db = $options['db'] ?? DB_PATH;
+    $storyId = isset($options['story-id']) ? (int)$options['story-id'] : null;
     
     $validTypes = ['top', 'new', 'best', 'all'];
     if (!in_array($type, $validTypes)) {
@@ -648,12 +671,21 @@ if (php_sapi_name() === 'cli') {
     
     $fetcher = new HackerNewsFetcher($db, "static/img/stories");
     
-    if ($type === 'all') {
-        $fetcher->fetchAll($limit);
+    if ($storyId) {
+        // Fetch single story by ID
+        $success = $fetcher->fetchStoryById($storyId);
+        if (!$success) {
+            exit(1);
+        }
     } else {
-        $fetcher->fetchAndStore($type, $limit);
-    }
+        // Fetch stories by type
+        if ($type === 'all') {
+            $fetcher->fetchAll($limit);
+        } else {
+            $fetcher->fetchAndStore($type, $limit);
+        }
 
-    // Clean up unused images after fetching
-    $fetcher->cleanupUnusedImages();
+        // Clean up unused images after fetching
+        $fetcher->cleanupUnusedImages();
+    }
 } 
