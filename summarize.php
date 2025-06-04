@@ -448,7 +448,7 @@ class StorySummarizer {
     }
 
     public function processStory($story, $downloadOnly = false, $storyType = null) {
-        echo "Processing story {$story['id']}\n";
+        echo "\nProcessing content for story {$story['id']}\n";
 
         $storySummaryFile = $this->outputDir . "/{$story['id']}-" . STORY_SUMMARY_FILE;
         if (file_exists($storySummaryFile)) {
@@ -505,7 +505,7 @@ class StorySummarizer {
     }
 
     public function processComments($story, $downloadOnly = false, $storyType = null) {
-        echo "Processing comments for story {$story['id']}\n";
+        echo "\nProcessing comments for story {$story['id']}\n";
 
         if ($storyType == 'new') {
             echo "  Skipping comments processing for new stories\n";
@@ -529,9 +529,8 @@ class StorySummarizer {
         $commentsContent = "";
         $commentsFile = $this->originalsDir . "/{$story['id']}-comments.txt";
         if (!file_exists($commentsFile) && $story['comments_url']) {
-            $commentsCount = (int)($story['comments_count'] ?? 0);
-            if ($commentsCount > 10) {
-                echo "Fetching comments ({$commentsCount})...\n";
+            if ($story['comments_count'] > 10) {
+                echo "Fetching comments ({$story['comments_count']})...\n";
                 $commentsContent = $this->fetchComments($story['comments_url']);
                 if ($commentsContent) {
                     file_put_contents($commentsFile, $commentsContent);
@@ -541,7 +540,7 @@ class StorySummarizer {
                     return;
                 }
             } else {
-                echo "Not enough comments to summarize ({$commentsCount})\n";
+                echo "Not enough comments to summarize ({$story['comments_count']})\n";
                 return;
             }
         }
@@ -557,7 +556,7 @@ class StorySummarizer {
         }
 
         if ($commentsContent) {
-            echo "  Summarizing comments (count: {$commentsCount})...\n";
+            echo "  Summarizing comments (count: {$story['comments_count']})...\n";
             $startTime = microtime(true);
             
             $commentsSummary = $this->summarize($commentsContent, "comments");
@@ -565,11 +564,11 @@ class StorySummarizer {
                 $commentsSummary = $this->cleanupContent($commentsSummary);
                 
                 if ($this->dryRun) {
-                    echo "  [DRY-RUN] Would save comments {$commentsCount} summary to {$commentsSummaryFile}\n";
+                    echo "  [DRY-RUN] Would save comments {$story['comments_count']} summary to {$commentsSummaryFile}\n";
                 } else {
                     // Save the comments summary
                     file_put_contents($commentsSummaryFile, $commentsSummary);
-                    echo "  Saved {$commentsCount} comments summary\n";
+                    echo "  Saved {$story['comments_count']} comments summary\n";
                 }
                 
                 // Calculate and display elapsed time
