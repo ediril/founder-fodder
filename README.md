@@ -4,12 +4,16 @@ $ php -S localhost:8000
 ```
 
 # How to fetch new content from HN
+The following fetches story urls and metadata:
 ```
 $ php fetch.php --type=top --limit=50
 ```
 
-# How to summarize new content
-TODO
+# How to summarize story and comments
+The following will first download and store the text for the story and its comments, then send them to AI to be summarized
+```
+$ php summarize.php --type=top --limit=50
+```
 
 ## To debug:
 - Start the "Listen for Xdebug" session in VS Code (select "Listen for Xdebug" and press F5).
