@@ -447,11 +447,12 @@ class StorySummarizer {
         
         // For "new" stories, skip comments processing entirely
         if ($storyType !== 'new') {
-            // Download comments
+            // Download comments only if we don't have them and there are enough comments
+            $commentsCount = (int)($story['comments_count'] ?? 0);
             $commentsContent = "";
             $commentsFile = $this->originalsDir . "/{$story['id']}-comments.txt";
-            if ($story['comments_url'] && !file_exists($commentsFile)) {
-                echo "Fetching comments...\n";
+            if ($commentsCount > 10 && $story['comments_url'] && !file_exists($commentsFile)) {
+                echo "Fetching comments (enough comments to warrant downloading)...\n";
                 $commentsContent = $this->fetchComments($story['comments_url']);
                 if ($commentsContent) {
                     file_put_contents($commentsFile, $commentsContent);
@@ -465,7 +466,6 @@ class StorySummarizer {
             return;
         }
         
-        // Summarize story content if we have it
         if (!$storyContent && file_exists($storyFile)) {
             $storyContent = file_get_contents($storyFile);
             echo "Loaded existing story content...\n";
@@ -473,56 +473,62 @@ class StorySummarizer {
         
         $summaryFile = $this->outputDir . "/{$story['id']}-" . STORY_SUMMARY_FILE;
         if ($storyContent && !file_exists($summaryFile)) {
-            echo "  Summarizing story content...\n";
-            $startTime = microtime(true);
-            
-            $storySummary = $this->summarize($storyContent, "story");
-            if ($storySummary) {
-                $storySummary = $this->cleanupContent($storySummary);
+            // Only summarize if story content is substantial (more than 1000 characters)
+            if (strlen($storyContent) > 750) {
+                echo "  Summarizing story (length: " . strlen($storyContent) . ")...\n";
+                $startTime = microtime(true);
                 
-                // Save the story summary
-                file_put_contents($summaryFile, $storySummary);
-                echo "  Saved story summary to {$summaryFile}\n";
-                
-                // Calculate and display elapsed time
-                $elapsedTime = microtime(true) - $startTime;
-                echo "  Story {$story['id']} summarized in " . number_format($elapsedTime, 2) . " sec\n";
+                $storySummary = $this->summarize($storyContent, "story");
+                if ($storySummary) {
+                    $storySummary = $this->cleanupContent($storySummary);
+                    
+                    // Save the story summary
+                    file_put_contents($summaryFile, $storySummary);
+                    echo "  Saved story summary to {$summaryFile}\n";
+                    
+                    // Calculate and display elapsed time
+                    $elapsedTime = microtime(true) - $startTime;
+                    echo "  Story {$story['id']} summarized in " . number_format($elapsedTime, 2) . " sec\n";
 
-                // Delete the original story content
-                //unlink($storyFile);
+                    // Delete the original story content
+                    //unlink($storyFile);
+                }
             }
         }
         
-        // Generate comments summary only if story type is not "new"
+        // Generate comments summary only if story type is not "new" and we have enough comments
         if ($storyType !== 'new') {
-            // Generate comments summary if needed and we have comments
-            $commentsContent = "";
-            $commentsFile = $this->originalsDir . "/{$story['id']}-comments.txt";
-            if (!$commentsContent && file_exists($commentsFile)) {
-                $commentsContent = file_get_contents($commentsFile);
-                echo "Loaded existing comments content...\n";
-            }
+            $commentsCount = (int)($story['comments_count'] ?? 0);
             
-            if ($commentsContent && strlen($commentsContent) > 1000) {
-                $commentsSummaryFile = $this->outputDir . "/{$story['id']}-" . COMMENTS_SUMMARY_FILE;
-                if (!file_exists($commentsSummaryFile)) {
-                    echo "  Summarizing comments...\n";
-                    $startTime = microtime(true);
-                    
-                    $commentsSummary = $this->summarize($commentsContent, "comments");
-                    if ($commentsSummary) {
-                        $commentsSummary = $this->cleanupContent($commentsSummary);
+            if ($commentsCount > 10) {
+                $commentsContent = "";
+                $commentsFile = $this->originalsDir . "/{$story['id']}-comments.txt";
+                if (!$commentsContent && file_exists($commentsFile)) {
+                    $commentsContent = file_get_contents($commentsFile);
+                    echo "Loaded existing comments content...\n";
+                }
+                
+                if ($commentsContent) {
+                    $commentsSummaryFile = $this->outputDir . "/{$story['id']}-" . COMMENTS_SUMMARY_FILE;
+                    if (!file_exists($commentsSummaryFile)) {
+                        echo "  Summarizing comments (count: {$commentsCount})...\n";
+                        $startTime = microtime(true);
                         
-                        // Save the comments summary
-                        file_put_contents($commentsSummaryFile, $commentsSummary);
-                        echo "  Saved comments summary to {$commentsSummaryFile}\n";
-                        
-                        // Calculate and display elapsed time
-                        $elapsedTime = microtime(true) - $startTime;
-                        echo "  Comments {$story['id']} summarized in " . number_format($elapsedTime, 2) . " sec\n";
+                        $commentsSummary = $this->summarize($commentsContent, "comments");
+                        if ($commentsSummary) {
+                            $commentsSummary = $this->cleanupContent($commentsSummary);
+                            
+                            // Save the comments summary
+                            file_put_contents($commentsSummaryFile, $commentsSummary);
+                            echo "  Saved comments summary to {$commentsSummaryFile}\n";
+                            
+                            // Calculate and display elapsed time
+                            $elapsedTime = microtime(true) - $startTime;
+                            echo "  Comments {$story['id']} summarized in " . number_format($elapsedTime, 2) . " sec\n";
 
-                        // Delete the original comments content
-                        //unlink($commentsFile);
+                            // Delete the original comments content
+                            //unlink($commentsFile);
+                        }
                     }
                 }
             }
@@ -540,7 +546,7 @@ class StorySummarizer {
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             
             $stmt = $pdo->prepare('
-                SELECT id, title, url, domain, comments_url
+                SELECT id, title, url, domain, comments_url, comments_count
                 FROM stories
                 WHERE type = ?
                 ORDER BY ranking
@@ -576,7 +582,7 @@ class StorySummarizer {
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             
             $stmt = $pdo->prepare('
-                SELECT id, title, url, domain, comments_url, type
+                SELECT id, title, url, domain, comments_url, comments_count, type
                 FROM stories
                 WHERE id = ?
             ');
