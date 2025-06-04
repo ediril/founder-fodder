@@ -142,7 +142,7 @@ class HackerNewsFetcher
             ]
         ]);
 
-        $response = file_get_contents($url, false, $context);
+        $response = @file_get_contents($url, false, $context);
         if ($response === false) {
             echo "Error fetching {$storyType} stories\n";
             return [];
@@ -163,7 +163,7 @@ class HackerNewsFetcher
             ]
         ]);
 
-        $response = file_get_contents($url, false, $context);
+        $response = @file_get_contents($url, false, $context);
         if ($response === false) {
             echo "Error fetching story {$storyId}\n";
             return null;
@@ -223,7 +223,7 @@ class HackerNewsFetcher
                 ]
             ]);
 
-            $imageData = file_get_contents($imageUrl, false, $context);
+            $imageData = @file_get_contents($imageUrl, false, $context);
             if ($imageData === false) {
                 echo "Failed to download image for story {$storyId}\n";
                 return;
@@ -259,7 +259,7 @@ class HackerNewsFetcher
                 ]
             ]);
 
-            $html = file_get_contents($url, false, $context);
+            $html = @file_get_contents($url, false, $context);
             if ($html === false) {
                 return null;
             }
@@ -356,7 +356,7 @@ class HackerNewsFetcher
                 ]
             ]);
 
-            $html = file_get_contents($url, false, $context);
+            $html = @file_get_contents($url, false, $context);
             if ($html === false) {
                 echo "Failed to fetch page {$url}\n";
                 return null;
