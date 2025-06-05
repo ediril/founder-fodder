@@ -858,6 +858,24 @@ $downloadOnly = isset($options['download-only']);
 $dryRun = isset($options['dry-run']);
 $storyId = isset($options['story-id']) ? (int)$options['story-id'] : null;
 
+print("storyType: {$storyType}\n");
+print("limit: {$limit}\n");
+if (isset($options['db'])) {
+    print("dbPath: {$dbPath}\n");
+}
+if (isset($options['output'])) {
+    print("outputDir: {$outputDir}\n");
+}
+if (isset($options['download-only'])) {
+    print("downloadOnly\n");
+}
+if (isset($options['dry-run'])) {
+    print("dryRun: {$dryRun}\n");
+}
+if (isset($options['story-id'])) {
+    print("storyId: {$storyId}\n");
+}
+
 try {
     $summarizer = new StorySummarizer($dbPath, $outputDir, ORIGINALS_DIR, $dryRun);
     
