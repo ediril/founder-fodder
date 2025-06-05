@@ -13,7 +13,7 @@ error_reporting(E_ALL & ~E_DEPRECATED);
     <title>Summary - <?php echo htmlspecialchars($story['title']); ?></title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/site.css">
+    <link rel="stylesheet" href="<?php echo asset_url('/static/css/site.css'); ?>">
     <!-- Add Markdown CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown.css">
 </head>

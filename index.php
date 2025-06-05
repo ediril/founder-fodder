@@ -321,6 +321,18 @@ if (!empty($base_path) && strpos($path, $base_path) === 0) {
 $path = '/' . ltrim($path, '/');
 debugLog("Normalized path: $path");
 
+/**
+ * Generate asset URL with version for cache busting
+ */
+function asset_url(string $path): string {
+    $full_path = ltrim($path, '/');
+    if (file_exists($full_path)) {
+        $version = filemtime($full_path);
+        return $path . '?v=' . $version;
+    }
+    return $path;
+}
+
 // Handle requests
 if ($path === '/' || $path === '/index.php') {
     // Get stories for the main page
@@ -389,6 +401,21 @@ if ($path === '/' || $path === '/index.php') {
     debugLog("Static file request: $file");
     if (file_exists($file)) {
         $extension = pathinfo($file, PATHINFO_EXTENSION);
+        
+        // Set cache control headers for static assets
+        header('Cache-Control: public, max-age=31536000'); // 1 year
+        header('Expires: ' . gmdate('D, d M Y H:i:s \G\M\T', time() + 31536000));
+        
+        // Set ETag based on file modification time
+        $etag = '"' . md5_file($file) . '"';
+        header('ETag: ' . $etag);
+        
+        // Check if client has a cached version
+        $client_etag = $_SERVER['HTTP_IF_NONE_MATCH'] ?? '';
+        if ($client_etag === $etag) {
+            http_response_code(304);
+            exit;
+        }
         
         // Set appropriate content type
         switch ($extension) {

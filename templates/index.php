@@ -6,7 +6,7 @@
     <title>Founder Fodder</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/site.css">
+    <link rel="stylesheet" href="<?php echo asset_url('/static/css/site.css'); ?>">
 </head>
 <body>
     <section class="hero is-small">
@@ -45,6 +45,12 @@
             </div>
             <?php else: ?>
             
+            <div class="last-updated-card">
+                <p class="is-size-7 has-text-grey">
+                    Last updated: <?php echo $last_updated ? format_time_ago($last_updated) : 'Never'; ?>
+                </p>
+            </div>
+
             <div class="story-list">
                 <?php foreach ($stories['stories'] as $story): ?>
                 <div class="story-card">
@@ -90,12 +96,6 @@
                 <?php endforeach; ?>
             </div>
             
-            <div class="last-updated-card">
-                <p class="is-size-7 has-text-grey">
-                    Last updated: <?php echo $last_updated ? format_time_ago($last_updated) : 'Never'; ?>
-                </p>
-            </div>
-
             <!-- Pagination -->
             <?php if ($stories['pagination']['has_more']): ?>
             <div class="pagination-wrapper has-text-centered mt-5">
