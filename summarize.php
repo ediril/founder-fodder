@@ -272,52 +272,206 @@ class StorySummarizer {
     }
     
     /**
-     * Recursively fetch comments and their replies with intelligent limiting
+     * Fetch multiple comments concurrently using curl_multi
      */
-    private function fetchCommentsRecursive($commentIds, $depth = 0, $maxDepth = 2) {
-        if (!$commentIds || $depth > $maxDepth) {
+    private function fetchCommentsBatch($commentIds, $batchSize = 50) {
+        if (empty($commentIds)) {
             return [];
         }
         
-        // Limit replies
-        if ($depth > 0) {
-            $maxReplies = 10; // Limit replies to 10 per comment
-            $commentIds = array_slice($commentIds, 0, $maxReplies);
+        // Process comments in smaller batches for better reliability
+        $batches = array_chunk($commentIds, $batchSize);
+        $allComments = [];
+        
+        foreach ($batches as $batchIndex => $batch) {
+            echo "    Processing batch " . ($batchIndex + 1) . "/" . count($batches) . " (" . count($batch) . " comments)...\n";
+            
+            // Use curl_multi for concurrent requests
+            $multiHandle = curl_multi_init();
+            $curlHandles = [];
+            
+            // Set up all curl handles
+            foreach ($batch as $commentId) {
+                $url = HN_ITEM_URL . "/{$commentId}.json";
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $url);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (compatible; FounderFodder/1.0)');
+                
+                curl_multi_add_handle($multiHandle, $ch);
+                $curlHandles[$commentId] = $ch;
+            }
+            
+            // Execute all requests concurrently
+            $running = null;
+            do {
+                curl_multi_exec($multiHandle, $running);
+                curl_multi_select($multiHandle);
+            } while ($running > 0);
+            
+            // Collect results
+            $batchComments = [];
+            foreach ($curlHandles as $commentId => $ch) {
+                $content = curl_multi_getcontent($ch);
+                curl_multi_remove_handle($multiHandle, $ch);
+                curl_close($ch);
+                
+                if ($content !== false) {
+                    $comment = json_decode($content, true);
+                    if ($comment && !isset($comment['dead']) && !isset($comment['deleted']) && isset($comment['text'])) {
+                        $comment['text'] = $this->decodeHtmlEntities($comment['text']);
+                        $batchComments[$commentId] = $comment;
+                    }
+                }
+            }
+            
+            curl_multi_close($multiHandle);
+            $allComments = $allComments + $batchComments;
+            echo "    Batch " . ($batchIndex + 1) . " completed: " . count($batchComments) . " valid comments\n";
         }
         
-        $comments = [];
-        foreach ($commentIds as $commentId) {
-            $comment = $this->fetchComment($commentId);
-            if (!$comment) {
-                continue;
+        return $allComments;
+    }
+    
+    /**
+     * Collect comment IDs breadth-first up to the limit
+     */
+    private function collectCommentIds($commentIds) {
+        $allIds = [];
+        $queue = $commentIds; // Start with top-level comment IDs
+        
+        echo "  Collecting comment IDs breadth-first (max: " . MAX_COMMENTS_TO_FETCH . ")...\n";
+        
+        // Keep collecting until queue is empty or we have enough IDs
+        while (!empty($queue) && count($allIds) < MAX_COMMENTS_TO_FETCH) {
+            $remaining = MAX_COMMENTS_TO_FETCH - count($allIds);
+            $currentBatch = array_splice($queue, 0, min(50, $remaining)); // Process in batches of 50
+            $allIds = array_merge($allIds, $currentBatch);
+            
+            // Fetch this batch to get reply IDs (only if we still need more)
+            if (count($allIds) < MAX_COMMENTS_TO_FETCH) {
+                $batchComments = $this->fetchCommentsBatch($currentBatch);
+                
+                // Add reply IDs to the queue for further processing
+                foreach ($currentBatch as $commentId) {
+                    if (isset($batchComments[$commentId]['kids'])) {
+                        $replyIds = $batchComments[$commentId]['kids'];
+                        $queue = array_merge($queue, $replyIds);
+                    }
+                }
             }
             
-            // Extract the comment text
-            $commentText = $comment['text'] ?? '';
-            if (!$commentText) {
-                continue;
-            }
-            
-            // Create a comment object with text and replies
-            $commentObj = [
-                'id' => $commentId,
-                'text' => $commentText,
-                'by' => $comment['by'] ?? '',
-                'time' => $comment['time'] ?? 0,
-                'replies' => []
-            ];
-            
-            // Recursively fetch replies if any (but limit depth and quantity)
-            if (isset($comment['kids']) && $comment['kids'] && $depth < $maxDepth) {
-                $replies = $this->fetchCommentsRecursive($comment['kids'], $depth + 1, $maxDepth);
-                $commentObj['replies'] = $replies;
-            }
-            
-            $comments[] = $commentObj;
-            
-            // Reduce delay significantly
-            usleep(5000); // 0.005 second (5ms)
+            echo "    Collected " . count($allIds) . " comment IDs so far...\n";
         }
+        
+        if (count($allIds) >= MAX_COMMENTS_TO_FETCH) {
+            echo "  Reached collection limit of " . MAX_COMMENTS_TO_FETCH . " comment IDs\n";
+        }
+        
+        echo "  Collected " . count($allIds) . " comment IDs total\n";
+        
+        return $allIds;
+    }
+
+    /**
+     * Build comment tree from flat comment data
+     */
+    private function buildCommentTree($topLevelIds, $allComments) {
+        $comments = [];
+        
+        foreach ($topLevelIds as $commentId) {
+            if (isset($allComments[$commentId])) {
+                $comment = $this->buildCommentWithReplies($commentId, $allComments);
+                if ($comment) {
+                    $comments[] = $comment;
+                }
+            }
+        }
+        
+        return $comments;
+    }
+    
+    /**
+     * Recursively build a comment with its replies
+     */
+    private function buildCommentWithReplies($commentId, $allComments) {
+        if (!isset($allComments[$commentId])) {
+            return null;
+        }
+        
+        $comment = $allComments[$commentId];
+        $commentText = $comment['text'] ?? '';
+        
+        if (!$commentText) {
+            return null;
+        }
+        
+        $commentObj = [
+            'id' => $commentId,
+            'text' => $commentText,
+            'by' => $comment['by'] ?? '',
+            'time' => $comment['time'] ?? 0,
+            'replies' => []
+        ];
+        
+        // Add replies if they exist in our collected comments
+        if (isset($comment['kids'])) {
+            foreach ($comment['kids'] as $replyId) {
+                $reply = $this->buildCommentWithReplies($replyId, $allComments);
+                if ($reply) {
+                    $commentObj['replies'][] = $reply;
+                }
+            }
+        }
+        
+        return $commentObj;
+    }
+
+    /**
+     * Fetch comments using efficient breadth-first approach
+     */
+    private function fetchCommentsEfficient($topLevelIds) {
+        // Step 1: Collect all comment IDs breadth-first (no limit here)
+        $allCommentIds = $this->collectCommentIds($topLevelIds);
+        
+        echo "  Collected " . count($allCommentIds) . " comment IDs total\n";
+        echo "  Batch fetching all comments...\n";
+        
+        // Step 2: Fetch comments in batches and limit by valid comments
+        $allComments = [];
+        $batches = array_chunk($allCommentIds, 50);
+        
+        foreach ($batches as $batchIndex => $batch) {
+            if (count($allComments) >= MAX_COMMENTS_TO_FETCH) {
+                echo "  Reached limit of " . MAX_COMMENTS_TO_FETCH . " valid comments\n";
+                break;
+            }
+            
+            $batchComments = $this->fetchCommentsBatch($batch);
+            
+            // Only add comments up to the limit
+            foreach ($batchComments as $commentId => $comment) {
+                if (count($allComments) < MAX_COMMENTS_TO_FETCH) {
+                    $allComments[$commentId] = $comment;
+                } else {
+                    break;
+                }
+            }
+            
+            echo "  Fetched " . count($allComments) . " valid comments so far...\n";
+            
+            if (count($allComments) >= MAX_COMMENTS_TO_FETCH) {
+                echo "  Reached limit of " . MAX_COMMENTS_TO_FETCH . " valid comments\n";
+                break;
+            }
+        }
+        
+        echo "  Successfully fetched " . count($allComments) . " valid comments\n";
+        echo "  Building comment tree...\n";
+        
+        // Step 3: Build the tree structure
+        $comments = $this->buildCommentTree($topLevelIds, $allComments);
         
         return $comments;
     }
@@ -348,10 +502,9 @@ class StorySummarizer {
             return "";
         }
         
-        // Fetch all comments recursively
-        echo "  Fetching comments for story {$storyId}...\n";
-        $comments = $this->fetchCommentsRecursive($story['kids']);
-        echo "  Fetched " . count($comments) . " top-level comments\n";
+        // Fetch all comments using efficient breadth-first approach
+        echo "  Fetching comments for story {$storyId} ...\n";
+        $comments = $this->fetchCommentsEfficient($story['kids']);
         
         // Format comments for summarization
         $combinedComments = "";
@@ -529,16 +682,16 @@ class StorySummarizer {
         $commentsContent = "";
         $commentsFile = $this->originalsDir . "/{$story['id']}-comments.txt";
         if (!file_exists($commentsFile) && $story['comments_url']) {
-            if ($story['comments_count'] > 10) {
-                echo "Fetching comments ({$story['comments_count']})...\n";
-                $commentsContent = $this->fetchComments($story['comments_url']);
-                if ($commentsContent) {
-                    file_put_contents($commentsFile, $commentsContent);
-                    echo "Comments saved...\n";
-                } else {
-                    echo "Failed to fetch comments\n";
-                    return;
-                }
+                    if ($story['comments_count'] > 10) {
+            echo "Fetching comments (will fetch up to " . MAX_COMMENTS_TO_FETCH . " valid comments)...\n";
+            $commentsContent = $this->fetchComments($story['comments_url']);
+            if ($commentsContent) {
+                file_put_contents($commentsFile, $commentsContent);
+                echo "Comments saved...\n";
+            } else {
+                echo "Failed to fetch comments\n";
+                return;
+            }
             } else {
                 echo "Not enough comments to summarize ({$story['comments_count']})\n";
                 return;
@@ -607,7 +760,7 @@ class StorySummarizer {
                 }
 
                 // Sleep to be nice to APIs and servers
-                sleep(2);
+                sleep(1);
             }
             
             echo "Completed processing of {$storyCnt} stories.\n";
@@ -626,7 +779,7 @@ class StorySummarizer {
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             
             $stmt = $pdo->prepare('
-                SELECT id, title, url, domain, comments_url, comments_count, type
+                SELECT id, title, url, domain, comments_url, comments_count, type, fetched_at
                 FROM stories
                 WHERE id = ?
             ');

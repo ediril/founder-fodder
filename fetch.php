@@ -280,6 +280,8 @@ class HackerNewsFetcher
             // Look for large images in content
             $images = $xpath->query('//img[@src]');
             foreach ($images as $img) {
+                if (!($img instanceof \DOMElement)) continue;
+                
                 $src = $img->getAttribute('src');
                 if (empty($src)) continue;
 
