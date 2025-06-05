@@ -22,8 +22,8 @@ const STORY_SUMMARY_FILE = "story-summary.md";
 const COMMENTS_SUMMARY_FILE = "comments-summary.md";
 
 // Directory constants
-const OUTPUT_DIR = "static/content";
-const ORIGINALS_DIR = "_originals";
+const OUTPUT_DIR = __DIR__ . "/static/content";
+const ORIGINALS_DIR = __DIR__ . "/_originals";
 // Create these directories if they don't exist
 if (!is_dir(OUTPUT_DIR)) {
     mkdir(OUTPUT_DIR, 0755, true);
@@ -284,6 +284,11 @@ class StorySummarizer {
         $allComments = [];
         
         foreach ($batches as $batchIndex => $batch) {
+            // Handle signals (CTRL+C, etc.)
+            if (function_exists('pcntl_signal_dispatch')) {
+                pcntl_signal_dispatch();
+            }
+            
             echo "    Processing batch " . ($batchIndex + 1) . "/" . count($batches) . " (" . count($batch) . " comments)...\n";
             
             // Use curl_multi for concurrent requests
@@ -308,6 +313,11 @@ class StorySummarizer {
             do {
                 curl_multi_exec($multiHandle, $running);
                 curl_multi_select($multiHandle);
+                
+                // Handle signals during the curl operations
+                if (function_exists('pcntl_signal_dispatch')) {
+                    pcntl_signal_dispatch();
+                }
             } while ($running > 0);
             
             // Collect results
@@ -345,6 +355,11 @@ class StorySummarizer {
         
         // Keep collecting until queue is empty or we have enough IDs
         while (!empty($queue) && count($allIds) < MAX_COMMENTS_TO_FETCH) {
+            // Handle signals (CTRL+C, etc.)
+            if (function_exists('pcntl_signal_dispatch')) {
+                pcntl_signal_dispatch();
+            }
+            
             $remaining = MAX_COMMENTS_TO_FETCH - count($allIds);
             $currentBatch = array_splice($queue, 0, min(50, $remaining)); // Process in batches of 50
             $allIds = array_merge($allIds, $currentBatch);
@@ -443,6 +458,11 @@ class StorySummarizer {
         $batches = array_chunk($allCommentIds, 50);
         
         foreach ($batches as $batchIndex => $batch) {
+            // Handle signals (CTRL+C, etc.)
+            if (function_exists('pcntl_signal_dispatch')) {
+                pcntl_signal_dispatch();
+            }
+            
             if (count($allComments) >= MAX_COMMENTS_TO_FETCH) {
                 echo "  Reached limit of " . MAX_COMMENTS_TO_FETCH . " valid comments\n";
                 break;
@@ -601,13 +621,12 @@ class StorySummarizer {
     }
 
     public function processStory($story, $downloadOnly = false, $storyType = null) {
-        echo "\nProcessing content for story {$story['id']}\n";
-
         $storySummaryFile = $this->outputDir . "/{$story['id']}-" . STORY_SUMMARY_FILE;
         if (file_exists($storySummaryFile)) {
             return;
         }
 
+        echo "\nProcessing content for story {$story['id']}\n";
         $storyContent = "";
         $storyFile = $this->originalsDir . "/{$story['id']}-story.txt";
         if (!file_exists($storyFile) && $story['url']) {
@@ -662,13 +681,12 @@ class StorySummarizer {
     }
 
     public function processComments($story, $downloadOnly = false, $storyType = null) {
-        echo "\nProcessing comments for story {$story['id']}\n";
-
         if ($storyType == 'new') {
             echo "  Skipping comments processing for new stories\n";
             return;
         }
 
+        echo "\nProcessing comments for story {$story['id']}\n";
         $commentsSummaryFile = $this->outputDir . "/{$story['id']}-" . COMMENTS_SUMMARY_FILE;
         if (file_exists($commentsSummaryFile)) {
             if ($story['fetched_at'] + 3600 * 72 < time()) {
