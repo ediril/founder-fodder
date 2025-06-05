@@ -309,6 +309,15 @@ body {
     transform: scale(1.1);
 }
 
+.last-updated-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 0.4rem 0.6rem;
+    margin-bottom: 1rem;
+    display: inline-block;
+}
+
 /* Update image placeholder for new layout */
 .image-placeholder {
     width: 100%;

@@ -331,8 +331,13 @@ if ($path === '/' || $path === '/index.php') {
     // Get stories for current page
     $stories = get_page_stories($story_type, $page, $per_page);
     
+    $db = new SQLite3(DB_PATH);
+    $result = $db->querySingle("select max(fetched_at) as max_ts from stories where type = '" . $story_type . "'", true);
+    $last_updated = $result['max_ts'];
+
     // Include the template with stories data
     include 'templates/index.php';
+
 } elseif (preg_match('/^\/summary\/(\d+)$/', $path, $matches)) {
     // Handle combined summary page
     $story_id = $matches[1];
@@ -364,17 +369,16 @@ if ($path === '/' || $path === '/index.php') {
     // Load summaries if they exist
     $story_summary = '';
     $comments_summary = '';
-    
+    $story_summary_last_updated = '';
+    $comments_summary_last_updated = '';
     if ($has_story_summary) {
         $story_summary = file_get_contents($story_summary_file);
+        $story_summary_last_updated = format_time_ago(filectime($story_summary_file));
     }
-    
     if ($has_comments_summary) {
         $comments_summary = file_get_contents($comments_summary_file);
+        $comments_summary_last_updated = format_time_ago(filectime($comments_summary_file));
     }
-
-    $story_summary_last_updated = format_time_ago(filectime($story_summary_file));
-    $comments_summary_last_updated = format_time_ago(filectime($comments_summary_file));
     
     // Include the summary template
     include 'templates/summary.php';

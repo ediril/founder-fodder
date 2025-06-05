@@ -90,6 +90,12 @@
                 <?php endforeach; ?>
             </div>
             
+            <div class="last-updated-card">
+                <p class="is-size-7 has-text-grey">
+                    Last updated: <?php echo $last_updated ? format_time_ago($last_updated) : 'Never'; ?>
+                </p>
+            </div>
+
             <!-- Pagination -->
             <?php if ($stories['pagination']['has_more']): ?>
             <div class="pagination-wrapper has-text-centered mt-5">
