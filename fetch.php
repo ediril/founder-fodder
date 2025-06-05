@@ -143,7 +143,7 @@ class HackerNewsFetcher
         }
 
         if ($headersOnly) {
-            return get_headers($url, true, $context);
+            return @get_headers($url, true, $context);
         } else {
             return @file_get_contents($url, false, $context);
         }
