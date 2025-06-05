@@ -29,13 +29,13 @@
                     <span class="icon"><i class="fa-solid fa-arrow-trend-up"></i></span>
                     <span>Top</span>
                 </a>
-                <a href="/?type=new" class="button <?php echo ($stories['type'] === 'new') ? 'is-primary' : ''; ?>">
-                    <span class="icon"><i class="fa-solid fa-clock"></i></span>
-                    <span>New</span>
-                </a>
                 <a href="/?type=best" class="button <?php echo ($stories['type'] === 'best') ? 'is-primary' : ''; ?>">
                     <span class="icon"><i class="fa-solid fa-star"></i></span>
                     <span>Best</span>
+                </a>
+                <a href="/?type=new" class="button <?php echo ($stories['type'] === 'new') ? 'is-primary' : ''; ?>">
+                    <span class="icon"><i class="fa-solid fa-clock"></i></span>
+                    <span>New</span>
                 </a>
             </div>
             
