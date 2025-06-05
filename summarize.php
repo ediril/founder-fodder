@@ -652,7 +652,11 @@ class StorySummarizer {
                 
                 // Calculate and display elapsed time
                 $elapsedTime = microtime(true) - $startTime;
-                echo "  Story {$story['id']} summarized in " . number_format($elapsedTime, 2) . " sec\n";
+                if ($this->dryRun) {
+                    echo "  [DRY-RUN] Story {$story['id']} processed in " . number_format($elapsedTime, 2) . " sec\n";
+                } else {
+                    echo "  Story {$story['id']} summarized in " . number_format($elapsedTime, 2) . " sec\n";
+                }
             }
         }
     }
@@ -726,7 +730,11 @@ class StorySummarizer {
                 
                 // Calculate and display elapsed time
                 $elapsedTime = microtime(true) - $startTime;
-                echo "  Comments for story {$story['id']} summarized in " . number_format($elapsedTime, 2) . " sec\n";
+                if ($this->dryRun) {
+                    echo "  [DRY-RUN] Comments for story {$story['id']} processed in " . number_format($elapsedTime, 2) . " sec\n";
+                } else {
+                    echo "  Comments for story {$story['id']} summarized in " . number_format($elapsedTime, 2) . " sec\n";
+                }
             }
         }
     }
