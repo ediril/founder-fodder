@@ -91,7 +91,7 @@ error_reporting(E_ALL & ~E_DEPRECATED);
     <footer class="footer">
         <div class="content has-text-centered">
             <p><a href="https://emrahdiril.com">Emrah Diril</a> &copy; 2025</p>
-            <p>100% coded with vibe</p>
+            <p>100% coded with ✨ & ❤️</p>
         </div>
     </footer>
 </body>
