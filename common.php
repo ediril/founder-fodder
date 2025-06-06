@@ -2,7 +2,7 @@
 
 const MAX_COMMENTS_TO_FETCH = 2500;
 const MAX_FETCH = 150;
-const MAX_SUMMARIZE = 50;
+const MAX_SUMMARIZE = 25;
 
 
 const FETCHER_LOCK_FILE_NAME = 'ff_fetch.lock';
@@ -115,26 +115,11 @@ function close_db_connection(?PDO $conn): void {
     }
 }
 
-function check_if_other_process_running(string $lockName, int $timeout = 60): void {
-    $waitTime = 0;
-    $first = true;
-    do {
-        if (file_exists(__DIR__ . '/' . $lockName)) {
-            if ($first) {
-                $first = false;
-                logMessage("Waiting for {$lockName} to stop running");
-            }
-            $waitTime += 3;
-            sleep(3);
-            dispatch_signal();
-        } else {
-            logMessage("OK, {$lockName} stopped");
-            break;
-        }
-        if ($waitTime >= $timeout) {
-            throw new Exception("{$lockName} is still running");
-        }
-    } while(true);
+function check_if_other_process_running(string $lockName, int $timeout = 60 * 2): void {
+    if (file_exists(__DIR__ . '/' . $lockName)) {
+        logMessage("{$lockName} is still running");
+        exit(1);
+    }
 }
 
 function debugLog($message) {
