@@ -1,6 +1,8 @@
 <?php
 
 const BATCH_SIZE = 25;
+const STORY_CONTENT_NOT_DETECTED = "Story content not detected";
+const ERROR_DOWNLOADING_CONTENT = "Error downloading content";
 
 // Security: Only allow execution from command line
 if (php_sapi_name() !== 'cli') {
@@ -180,12 +182,13 @@ class StorySummarizer {
             $mainContent = $this->decodeHtmlEntities($mainContent);
             
             if (!$mainContent) {
-                echo " .. Could not find the story content in story HTML\n";
+                logMessage(STORY_CONTENT_NOT_DETECTED . " in story HTML\n");
+                return STORY_CONTENT_NOT_DETECTED;
             }
             
             return $mainContent;
         } catch (Exception $e) {
-            return "Error fetching content: " . $e->getMessage();
+            return ERROR_DOWNLOADING_CONTENT . ": " . $e->getMessage();
         }
     }
     
@@ -563,14 +566,24 @@ class StorySummarizer {
             echo "Fetching story ...\n";
             $storyContent = $this->fetchStoryContent($story['url']);
             
-            if (strlen($storyContent) > MIN_STORY_LENGTH_FOR_SUMMARY) {
-                file_put_contents($storyFile, $storyContent);
-                echo "Saved story to {$storyFile}\n";
-            } else {
+            if ($storyContent === STORY_CONTENT_NOT_DETECTED) {
+                file_put_contents($storySummaryFile, STORY_CONTENT_NOT_DETECTED);
+                return;
+            }
+            
+            if (str_contains($storyContent, ERROR_DOWNLOADING_CONTENT)) {
+                logMessage($storyContent);
+                return;
+            }
+            
+            if (strlen($storyContent) < MIN_STORY_LENGTH_FOR_SUMMARY) {
                 logMessage("  Story is too short to summarize (length: " . strlen($storyContent) . ")\n");
                 file_put_contents($storySummaryFile, "Story is too short to summarize");
                 return;
             }
+
+            file_put_contents($storyFile, $storyContent);
+            logMessage("Saved story to {$storyFile}\n");
         }
         
         if ($downloadOnly) {
