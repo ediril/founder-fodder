@@ -811,6 +811,8 @@ $downloadOnly = isset($options['download-only']);
 $dryRun = isset($options['dry-run']);
 $storyId = isset($options['id']) ? (int)$options['id'] : null;
 
+logMessage("Summarizer Version: " . SUMMARIZER_VERSION);
+
 print("storyType: {$storyType}\n");
 print("limit: {$limit}\n");
 if (isset($options['db'])) {

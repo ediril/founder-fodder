@@ -579,7 +579,7 @@ if (!function_exists('array_any')) {
 // Command line interface
 if (php_sapi_name() === 'cli') {
     // Define valid options
-    $validOptions = ['type:', 'limit:', 'db:', 'story-id:', 'help'];
+    $validOptions = ['type:', 'limit:', 'db:', 'id:', 'help'];
     $options = getopt('', $validOptions);
     
     // Check for unknown arguments by comparing $argv with parsed options
@@ -623,7 +623,7 @@ if (php_sapi_name() === 'cli') {
         echo "  --type=TYPE     Type of stories to fetch: top, new, best, all (default: all)\n";
         echo "  --limit=LIMIT   Maximum number of stories to fetch per type (default: 100)\n";
         echo "  --db=PATH       Path to SQLite database (default: stories.db)\n";
-        echo "  --story-id=ID   Fetch a single story by ID\n";
+        echo "  --id=STORY-ID   Fetch a single story by ID\n";
         echo "  --help          Show this help message\n";
         exit(0);
     }
@@ -631,7 +631,7 @@ if (php_sapi_name() === 'cli') {
     $type = $options['type'] ?? 'all';
     $limit = (int)($options['limit'] ?? MAX_FETCH);
     $db = $options['db'] ?? DB_PATH;
-    $storyId = isset($options['story-id']) ? (int)$options['story-id'] : null;
+    $storyId = isset($options['id']) ? (int)$options['id'] : null;
     
     $validTypes = ['top', 'new', 'best', 'all'];
     if (!in_array($type, $validTypes)) {
@@ -640,6 +640,8 @@ if (php_sapi_name() === 'cli') {
     }
     
     $fetcher = new HackerNewsFetcher($db, "static/img/stories");
+
+    logMessage("Fetcher Version: " . FETCHER_VERSION);
     
     if ($storyId) {
         // Fetch single story by ID
