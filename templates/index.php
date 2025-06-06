@@ -103,7 +103,7 @@
                    class="button is-primary is-medium">
                     <span>More Stories</span>
                     <span class="icon">
-                        <i class="fa-solid fa-arrow-down"></i>
+                        <i class="fa-solid fa-arrow-right"></i>
                     </span>
                 </a>
             </div>
