@@ -1,5 +1,12 @@
 <?php
 
+const MAX_COMMENTS_TO_FETCH = 2500;
+const MAX_FETCH = 150;
+const MAX_SUMMARIZE = 50;
+
+
+const FETCHER_LOCK_FILE_NAME = 'ff_fetch.lock';
+const SUMMARIZER_LOCK_FILE_NAME = 'ff_summarize.lock';
 const DB_PATH = "stories.db";
 const STORIES_PER_PAGE = 10;
 const STORY_TYPES = [
@@ -7,13 +14,6 @@ const STORY_TYPES = [
     "new" => 2,
     "best" => 3,
 ];
-
-const MAX_COMMENTS_TO_FETCH = 2500;
-const MAX_FETCH = 150;
-const MAX_SUMMARIZE = 10;
-
-const FETCHER_LOCK_FILE_NAME = 'ff_fetch.lock';
-const SUMMARIZER_LOCK_FILE_NAME = 'ff_summarize.lock';
 
 function acquireLock(string $lockName) {
     $lockFile = __DIR__ . '/' . $lockName;       
