@@ -9,6 +9,13 @@ if (php_sapi_name() !== 'cli') {
 require_once __DIR__ . '/defines.php';
 require_once __DIR__ . '/vendor/autoload.php';
 
+/**
+ * Log message with timestamp
+ */
+function logMessage(string $message): void {
+    echo '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
+}
+
 use Dotenv\Dotenv;
 $dotenv = Dotenv::createImmutable(__DIR__ . '/../../_env', '.founderfodder.env');
 $dotenv->load();
@@ -45,6 +52,7 @@ class StorySummarizer {
     private $lockFile;
     private $lockHandle;
     private $dryRun;
+    private ?\PDO $pdo = null;
     
     public function __construct($dbPath = DB_PATH, $outputDir = OUTPUT_DIR, $originalsDir = ORIGINALS_DIR, $dryRun = false) {
         // Initialize file locking first
@@ -60,6 +68,9 @@ class StorySummarizer {
         $this->outputDir = $outputDir;
         $this->originalsDir = $originalsDir;
         $this->dryRun = $dryRun;
+        
+        // Initialize database connection
+        $this->initDb();
         
         if ($dryRun) {
             echo "DRY-RUN MODE: Will not send content to Gemini API\n";
@@ -83,6 +94,21 @@ class StorySummarizer {
         if (!is_dir($this->originalsDir)) {
             mkdir($this->originalsDir, 0755, true);
         }
+    }
+    
+    /**
+     * Initialize database connection with optimizations
+     */
+    private function initDb(): void
+    {
+        $this->pdo = new \PDO("sqlite:{$this->dbPath}");
+        $this->pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+        
+        // Configure SQLite for better reliability and performance
+        $this->pdo->exec('PRAGMA journal_mode = WAL');
+        $this->pdo->exec('PRAGMA synchronous = NORMAL');
+        $this->pdo->exec('PRAGMA temp_store = MEMORY');
+        $this->pdo->exec('PRAGMA mmap_size = 268435456'); // 256MB
     }
     
     /**
@@ -111,13 +137,18 @@ class StorySummarizer {
         // Register shutdown function to clean up lock
         register_shutdown_function([$this, 'releaseLock']);
         
-        echo "Acquired process lock (PID: " . getmypid() . ")\n";
+        logMessage("Acquired process lock (PID: " . getmypid() . ")");
     }
     
     /**
-     * Release the file lock
+     * Release the file lock and close database connection
      */
     public function releaseLock() {
+        // Close database connection explicitly
+        if (isset($this->pdo)) {
+            $this->pdo = null;
+        }
+        
         if ($this->lockHandle) {
             flock($this->lockHandle, LOCK_UN);
             fclose($this->lockHandle);
@@ -128,7 +159,7 @@ class StorySummarizer {
                 unlink($this->lockFile);
             }
             
-            echo "Released process lock\n";
+            logMessage("Released process lock");
         }
     }
     
@@ -137,7 +168,7 @@ class StorySummarizer {
      */
     public function handleSignal(int $signal): void
     {
-        echo "\nReceived signal {$signal}. Cleaning up and exiting...\n";
+        logMessage("Received signal {$signal}. Cleaning up and exiting...");
         $this->releaseLock();
         exit(0);
     }
@@ -626,7 +657,7 @@ class StorySummarizer {
             return;
         }
 
-        echo "\nProcessing content for story {$story['id']}\n";
+        logMessage("Processing content for story {$story['id']}");
         $storyContent = "";
         $storyFile = $this->originalsDir . "/{$story['id']}-story.txt";
         if (!file_exists($storyFile) && $story['url']) {
@@ -686,7 +717,7 @@ class StorySummarizer {
             return;
         }
 
-        echo "\nProcessing comments for story {$story['id']}\n";
+        logMessage("Processing comments for story {$story['id']}");
         $commentsSummaryFile = $this->outputDir . "/{$story['id']}-" . COMMENTS_SUMMARY_FILE;
         if (file_exists($commentsSummaryFile)) {
             if ($story['fetched_at'] + 3600 * 72 < time()) {
@@ -761,13 +792,10 @@ class StorySummarizer {
      * Run the summarization process
      */
     public function run($storyType = "top", $limit = 10, $downloadOnly = false) {
-        echo "Looking for {$storyType} stories to process (limit: {$limit})...\n";
+        logMessage("Looking for {$storyType} stories to process (limit: {$limit})...");
         
         try {
-            $pdo = new PDO("sqlite:{$this->dbPath}");
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            
-            $stmt = $pdo->prepare('
+            $stmt = $this->pdo->prepare('
                 SELECT id, title, url, domain, comments_url, comments_count, fetched_at
                 FROM stories
                 WHERE type = ?
@@ -789,10 +817,10 @@ class StorySummarizer {
                 sleep(1);
             }
             
-            echo "Completed processing of {$storyCnt} stories.\n";
+            logMessage("Completed processing of {$storyCnt} stories.");
             
         } catch (PDOException $e) {
-            echo "Database error: " . $e->getMessage() . "\n";
+            logMessage("Database error: " . $e->getMessage());
         }
     }
     
@@ -801,10 +829,7 @@ class StorySummarizer {
      */
     public function processStoryById($storyId, $downloadOnly = false) {
         try {
-            $pdo = new PDO("sqlite:{$this->dbPath}");
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            
-            $stmt = $pdo->prepare('
+            $stmt = $this->pdo->prepare('
                 SELECT id, title, url, domain, comments_url, comments_count, type, fetched_at
                 FROM stories
                 WHERE id = ?
@@ -816,11 +841,11 @@ class StorySummarizer {
                 $this->processStory($story, $downloadOnly, $story['type']);
                 $this->processComments($story, $downloadOnly, $story['type']);
             } else {
-                echo "Story ID {$storyId} not found in database.\n";
+                logMessage("Story ID {$storyId} not found in database.");
             }
             
         } catch (PDOException $e) {
-            echo "Database error: " . $e->getMessage() . "\n";
+            logMessage("Database error: " . $e->getMessage());
         }
     }
 }
@@ -851,7 +876,7 @@ if (isset($options['help']) || isset($options['h'])) {
 }
 
 $storyType = $options['type'] ?? 'all';
-$limit = isset($options['limit']) ? (int)$options['limit'] : 100;
+$limit = isset($options['limit']) ? (int)$options['limit'] : 10;
 $dbPath = $options['db'] ?? DB_PATH;
 $outputDir = $options['output'] ?? OUTPUT_DIR;
 $downloadOnly = isset($options['download-only']);
@@ -886,10 +911,10 @@ try {
             // Process all story types with the limit applying to each type
             $types = ['top', 'new', 'best'];
             foreach ($types as $type) {
-                echo "\n=== Processing {$type} stories ===\n";
+                logMessage("=== Processing {$type} stories ===");
                 $summarizer->run($type, $limit, $downloadOnly);
             }
-            echo "\n=== Completed processing all story types ===\n";
+            logMessage("=== Completed processing all story types ===");
         } else {
             // Process single story type
             $summarizer->run($storyType, $limit, $downloadOnly);

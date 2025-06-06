@@ -8,6 +8,13 @@ if (php_sapi_name() !== 'cli') {
 
 require_once __DIR__ . '/defines.php';
 
+/**
+ * Log message with timestamp
+ */
+function logMessage(string $message): void {
+    echo '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
+}
+
 class HackerNewsFetcher
 {
     private const BASE_URL = "https://hacker-news.firebaseio.com/v0";
@@ -22,7 +29,7 @@ class HackerNewsFetcher
     private string $imgDir;
     private string $lockFile;
     private $lockHandle;
-    private \PDO $pdo;
+    private ?\PDO $pdo = null;
 
     public function __construct(string $dbPath = DB_PATH, string $imgDir = "static/img/stories")
     {
@@ -32,7 +39,7 @@ class HackerNewsFetcher
         
         // Check if another instance is running
         if (!$this->acquireLock()) {
-            echo "Another instance of the fetcher is already running. Exiting.\n";
+            logMessage("Another instance of the fetcher is already running. Exiting.");
             exit(1);
         }
         
@@ -81,6 +88,11 @@ class HackerNewsFetcher
 
     public function cleanup(): void
     {
+        // Close database connection explicitly
+        if (isset($this->pdo)) {
+            $this->pdo = null;
+        }
+        
         if ($this->lockHandle) {
             flock($this->lockHandle, LOCK_UN);
             fclose($this->lockHandle);
@@ -94,7 +106,7 @@ class HackerNewsFetcher
 
     public function handleSignal(int $signal): void
     {
-        echo "\nReceived signal {$signal}. Cleaning up and exiting...\n";
+        logMessage("Received signal {$signal}. Cleaning up and exiting...");
         $this->cleanup();
         exit(0);
     }
@@ -103,6 +115,12 @@ class HackerNewsFetcher
     {
         $this->pdo = new \PDO("sqlite:{$this->dbPath}");
         $this->pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+        
+        // Configure SQLite for better reliability and performance
+        $this->pdo->exec('PRAGMA journal_mode = WAL');
+        $this->pdo->exec('PRAGMA synchronous = NORMAL');
+        $this->pdo->exec('PRAGMA temp_store = MEMORY');
+        $this->pdo->exec('PRAGMA mmap_size = 268435456'); // 256MB
         
         // Create the stories table if it doesn't exist
         $this->pdo->exec('
@@ -439,11 +457,11 @@ class HackerNewsFetcher
 
     public function fetchAndStore(string $storyType = "top", int $limit = 100): int
     {
-        echo "\nFetching {$storyType} stories...\n";
+        logMessage("Fetching {$storyType} stories...");
         $storyIds = $this->fetchStoryIds($storyType);
 
         if (empty($storyIds)) {
-            echo "No {$storyType} story IDs found\n";
+            logMessage("No {$storyType} story IDs found");
             return 0;
         }
 
@@ -451,36 +469,46 @@ class HackerNewsFetcher
         $storyIds = array_slice($storyIds, 0, $limit);
         $newStoriesCount = count($storyIds);
 
-        // Shift down the rankings of existing stories that aren't being refetched
-        $placeholders = str_repeat('?,', count($storyIds) - 1) . '?';
-        $stmt = $this->pdo->prepare("
-            UPDATE stories 
-            SET ranking = ranking + ?
-            WHERE type = ? AND id NOT IN ({$placeholders})
-        ");
-        $params = array_merge([$newStoriesCount, $storyType], $storyIds);
-        $stmt->execute($params);
+        try {
+            $this->pdo->beginTransaction();
+            
+            // Shift down the rankings of existing stories that aren't being refetched
+            $placeholders = str_repeat('?,', count($storyIds) - 1) . '?';
+            $stmt = $this->pdo->prepare("
+                UPDATE stories 
+                SET ranking = ranking + ?
+                WHERE type = ? AND id NOT IN ({$placeholders})
+            ");
+            $params = array_merge([$newStoriesCount, $storyType], $storyIds);
+            $stmt->execute($params);
 
-        $count = 0;
-        foreach ($storyIds as $ranking => $storyId) {
-            $story = $this->fetchStoryDetails($storyId);
-            if ($story) {
-                $this->storeStory($story, $storyType, $ranking);
-                $count++;
+            $count = 0;
+            foreach ($storyIds as $ranking => $storyId) {
+                $story = $this->fetchStoryDetails($storyId);
+                if ($story) {
+                    $this->storeStory($story, $storyType, $ranking);
+                    $count++;
 
-                // Print progress every 10 stories
+                                    // Print progress every 10 stories
                 if ($count % 10 === 0) {
-                    echo "Processed {$count}/" . count($storyIds) . " {$storyType} stories\n";
+                    logMessage("Processed {$count}/" . count($storyIds) . " {$storyType} stories");
                 }
 
-                // Small delay to be nice to the API
-                usleep(100000); // 0.1 seconds
+                    // Small delay to be nice to the API
+                    usleep(100000); // 0.1 seconds
+                }
             }
+            
+            $this->pdo->commit();
+            logMessage("Completed fetching {$count} {$storyType} stories");
+            
+            return $count;
+            
+        } catch (\Exception $e) {
+            $this->pdo->rollback();
+            logMessage("Error during batch processing: " . $e->getMessage());
+            throw $e;
         }
-
-        echo "Completed fetching {$count} {$storyType} stories\n";
-        
-        return $count;
     }
 
     public function fetchAll(int $limit = 100): int
@@ -491,7 +519,7 @@ class HackerNewsFetcher
             $total += $count;
         }
 
-        echo "Total stories fetched: {$total}\n";
+        logMessage("Total stories fetched: {$total}");
                 
         return $total;
     }
