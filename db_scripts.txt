@@ -1,0 +1,14 @@
+
+:compact db:
+sqlite3 yourdatabase.db "PRAGMA wal_checkpoint(TRUNCATE); VACUUM;"
+
+
+:integrity check:
+sqlite3 yourdatabase.db "PRAGMA integrity_check;"
+
+
+:recover corrupted db
+1. sqlite3 yourdatabase.db .dump | sqlite3 newdatabase.db
+
+2. sqlite3 yourdatabase.db ".recover" | sqlite3 newdatabase.db
+
