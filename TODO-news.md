@@ -1,4 +1,6 @@
 
+- Summarizer: Delete stories, comments and summaries if they were fetched over 1 month ago
+
 - Use HEAD to fetch an image for the url
     The <head> section of a web page typically contains metadata, including references to images such as:
     - Favicons (<link rel="icon" ...>)
