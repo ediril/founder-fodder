@@ -788,6 +788,12 @@ $options = getopt('h', [
     'help'
 ]);
 
+if (count($options) !== count($argv) - 1) {
+    $invalidCount = (count($argv) - 1) - count($options);
+    logMessage("{$invalidCount} invalid options found\n");
+    exit(1);
+}
+
 if (isset($options['help']) || isset($options['h'])) {
     echo "Usage: php summarize.php [options]\n";
     echo "Options:\n";

@@ -578,41 +578,11 @@ if (!function_exists('array_any')) {
 // Command line interface
 if (php_sapi_name() === 'cli') {
     // Define valid options
-    $validOptions = ['type:', 'limit:', 'db:', 'id:', 'help'];
-    $options = getopt('', $validOptions);
+    $options = getopt('h', ['type:', 'limit:', 'db:', 'id:', 'help']);
     
-    // Check for unknown arguments by comparing $argv with parsed options
-    $knownArgs = [];
-    foreach ($options as $key => $value) {
-        if ($key === 'help') {
-            $knownArgs[] = '--help';
-        } else {
-            $knownArgs[] = "--{$key}={$value}";
-        }
-    }
-    
-    // Find any arguments that weren't recognized
-    $unknownArgs = [];
-    for ($i = 1; $i < $argc; $i++) {
-        $arg = $argv[$i];
-        if (str_starts_with($arg, '--')) {
-            $found = false;
-            foreach ($knownArgs as $knownArg) {
-                if ($arg === $knownArg || str_starts_with($arg, explode('=', $knownArg)[0] . '=')) {
-                    $found = true;
-                    break;
-                }
-            }
-            if (!$found) {
-                $unknownArgs[] = $arg;
-            }
-        }
-    }
-    
-    // Exit with error if unknown arguments found
-    if (!empty($unknownArgs)) {
-        echo "Error: Unknown argument(s): " . implode(', ', $unknownArgs) . "\n";
-        echo "Use --help to see valid options.\n";
+    if (count($options) !== count($argv) - 1) {
+        $invalidCount = (count($argv) - 1) - count($options);
+        logMessage("{$invalidCount} invalid options found\n");
         exit(1);
     }
     
@@ -623,7 +593,7 @@ if (php_sapi_name() === 'cli') {
         echo "  --limit=LIMIT   Maximum number of stories to fetch per type (default: 100)\n";
         echo "  --db=PATH       Path to SQLite database (default: stories.db)\n";
         echo "  --id=STORY-ID   Fetch a single story by ID\n";
-        echo "  --help          Show this help message\n";
+        echo "  --help, -h      Show this help message\n";
         exit(0);
     }
     
