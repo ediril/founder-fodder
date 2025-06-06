@@ -54,7 +54,7 @@ class StorySummarizer {
     private $dryRun;
     private ?\PDO $pdo = null;
     
-    public function __construct($dbPath = DB_PATH, $outputDir = OUTPUT_DIR, $originalsDir = ORIGINALS_DIR, $dryRun = false) {
+    public function __construct($dbPath = FF_CONSTS\DB_PATH, $outputDir = OUTPUT_DIR, $originalsDir = ORIGINALS_DIR, $dryRun = false) {
         // Initialize file locking first
         $this->initializeLock();
         
@@ -382,21 +382,21 @@ class StorySummarizer {
         $allIds = [];
         $queue = $commentIds; // Start with top-level comment IDs
         
-        echo "  Collecting comment IDs breadth-first (max: " . MAX_COMMENTS_TO_FETCH . ")...\n";
+        echo "  Collecting comment IDs breadth-first (max: " . FF_CONSTS\MAX_COMMENTS_TO_FETCH . ")...\n";
         
         // Keep collecting until queue is empty or we have enough IDs
-        while (!empty($queue) && count($allIds) < MAX_COMMENTS_TO_FETCH) {
+        while (!empty($queue) && count($allIds) < FF_CONSTS\MAX_COMMENTS_TO_FETCH) {
             // Handle signals (CTRL+C, etc.)
             if (function_exists('pcntl_signal_dispatch')) {
                 pcntl_signal_dispatch();
             }
             
-            $remaining = MAX_COMMENTS_TO_FETCH - count($allIds);
+            $remaining = FF_CONSTS\MAX_COMMENTS_TO_FETCH - count($allIds);
             $currentBatch = array_splice($queue, 0, min(50, $remaining)); // Process in batches of 50
             $allIds = array_merge($allIds, $currentBatch);
             
             // Fetch this batch to get reply IDs (only if we still need more)
-            if (count($allIds) < MAX_COMMENTS_TO_FETCH) {
+            if (count($allIds) < FF_CONSTS\MAX_COMMENTS_TO_FETCH) {
                 $batchComments = $this->fetchCommentsBatch($currentBatch);
                 
                 // Add reply IDs to the queue for further processing
@@ -411,8 +411,8 @@ class StorySummarizer {
             echo "    Collected " . count($allIds) . " comment IDs so far...\n";
         }
         
-        if (count($allIds) >= MAX_COMMENTS_TO_FETCH) {
-            echo "  Reached collection limit of " . MAX_COMMENTS_TO_FETCH . " comment IDs\n";
+        if (count($allIds) >= FF_CONSTS\MAX_COMMENTS_TO_FETCH) {
+            echo "  Reached collection limit of " . FF_CONSTS\MAX_COMMENTS_TO_FETCH . " comment IDs\n";
         }
         
         echo "  Collected " . count($allIds) . " comment IDs total\n";
@@ -494,8 +494,8 @@ class StorySummarizer {
                 pcntl_signal_dispatch();
             }
             
-            if (count($allComments) >= MAX_COMMENTS_TO_FETCH) {
-                echo "  Reached limit of " . MAX_COMMENTS_TO_FETCH . " valid comments\n";
+            if (count($allComments) >= FF_CONSTS\MAX_COMMENTS_TO_FETCH) {
+                echo "  Reached limit of " . FF_CONSTS\MAX_COMMENTS_TO_FETCH . " valid comments\n";
                 break;
             }
             
@@ -503,7 +503,7 @@ class StorySummarizer {
             
             // Only add comments up to the limit
             foreach ($batchComments as $commentId => $comment) {
-                if (count($allComments) < MAX_COMMENTS_TO_FETCH) {
+                if (count($allComments) < FF_CONSTS\MAX_COMMENTS_TO_FETCH) {
                     $allComments[$commentId] = $comment;
                 } else {
                     break;
@@ -512,8 +512,8 @@ class StorySummarizer {
             
             echo "  Fetched " . count($allComments) . " valid comments so far...\n";
             
-            if (count($allComments) >= MAX_COMMENTS_TO_FETCH) {
-                echo "  Reached limit of " . MAX_COMMENTS_TO_FETCH . " valid comments\n";
+            if (count($allComments) >= FF_CONSTS\MAX_COMMENTS_TO_FETCH) {
+                echo "  Reached limit of " . FF_CONSTS\MAX_COMMENTS_TO_FETCH . " valid comments\n";
                 break;
             }
         }
@@ -736,7 +736,7 @@ class StorySummarizer {
         $commentsFile = $this->originalsDir . "/{$story['id']}-comments.txt";
         if (!file_exists($commentsFile) && $story['comments_url']) {
                     if ($story['comments_count'] > 10) {
-            echo "Fetching comments (will fetch up to " . MAX_COMMENTS_TO_FETCH . " valid comments)...\n";
+            echo "Fetching comments (will fetch up to " . FF_CONSTS\MAX_COMMENTS_TO_FETCH . " valid comments)...\n";
             $commentsContent = $this->fetchComments($story['comments_url']);
             if ($commentsContent) {
                 file_put_contents($commentsFile, $commentsContent);
@@ -794,14 +794,22 @@ class StorySummarizer {
     public function run($storyType = "top", $limit = 10, $downloadOnly = false) {
         logMessage("Looking for {$storyType} stories to process (limit: {$limit})...");
         
+        // Get type ID for the story type
+        $typeId = FF_CONSTS\STORY_TYPES[$storyType] ?? null;
+        if (!$typeId) {
+            logMessage("Invalid story type: {$storyType}");
+            return;
+        }
+        
         try {
             $stmt = $this->pdo->prepare('
-                SELECT id, title, url, domain, comments_url, comments_count, fetched_at
-                FROM stories
-                WHERE type = ?
-                ORDER BY ranking
+                SELECT s.id, s.title, s.url, s.domain, s.comments_url, s.comments_count, s.fetched_at
+                FROM stories s
+                INNER JOIN ranks r ON s.id = r.id
+                WHERE r.type = ?
+                ORDER BY r.rank
             ');
-            $stmt->execute([$storyType]);
+            $stmt->execute([$typeId]);
             
             $storyCnt = 0;
             while ($story = $stmt->fetch(PDO::FETCH_ASSOC)) {
@@ -830,16 +838,22 @@ class StorySummarizer {
     public function processStoryById($storyId, $downloadOnly = false) {
         try {
             $stmt = $this->pdo->prepare('
-                SELECT id, title, url, domain, comments_url, comments_count, type, fetched_at
-                FROM stories
-                WHERE id = ?
+                SELECT s.id, s.title, s.url, s.domain, s.comments_url, s.comments_count, s.fetched_at, r.type
+                FROM stories s
+                INNER JOIN ranks r ON s.id = r.id
+                WHERE s.id = ?
+                LIMIT 1
             ');
             $stmt->execute([$storyId]);
             
             $story = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($story) {
-                $this->processStory($story, $downloadOnly, $story['type']);
-                $this->processComments($story, $downloadOnly, $story['type']);
+                // Convert type ID back to string
+                $typeMap = array_flip(FF_CONSTS\STORY_TYPES);
+                $storyTypeString = $typeMap[$story['type']] ?? throw new Exception("Unknown type for story-id {$storyId}");
+                
+                $this->processStory($story, $downloadOnly, $storyTypeString);
+                $this->processComments($story, $downloadOnly, $storyTypeString);
             } else {
                 logMessage("Story ID {$storyId} not found in database.");
             }
@@ -866,7 +880,7 @@ if (isset($options['help']) || isset($options['h'])) {
     echo "Options:\n";
     echo "  --type=TYPE        Type of stories to summarize (top, new, best, all) [default: all]\n";
     echo "  --limit=N          Maximum number of stories to process per type [default: 100]\n";
-    echo "  --db=PATH          Path to SQLite database [default: " . DB_PATH . "]\n";
+    echo "  --db=PATH          Path to SQLite database [default: " . FF_CONSTS\DB_PATH . "]\n";
     echo "  --output=PATH      Output directory for content files [default: " . OUTPUT_DIR . "]\n";
     echo "  --download-only    Download story and comments content without summarizing\n";
     echo "  --dry-run          Process and show what would be summarized without calling Gemini API\n";
@@ -877,7 +891,7 @@ if (isset($options['help']) || isset($options['h'])) {
 
 $storyType = $options['type'] ?? 'all';
 $limit = isset($options['limit']) ? (int)$options['limit'] : 10;
-$dbPath = $options['db'] ?? DB_PATH;
+$dbPath = $options['db'] ?? FF_CONSTS\DB_PATH;
 $outputDir = $options['output'] ?? OUTPUT_DIR;
 $downloadOnly = isset($options['download-only']);
 $dryRun = isset($options['dry-run']);
@@ -909,7 +923,8 @@ try {
     } else {
         if ($storyType === 'all') {
             // Process all story types with the limit applying to each type
-            $types = ['top', 'new', 'best'];
+            $types = array_keys(FF_CONSTS\STORY_TYPES);
+            
             foreach ($types as $type) {
                 logMessage("=== Processing {$type} stories ===");
                 $summarizer->run($type, $limit, $downloadOnly);
