@@ -6,37 +6,9 @@ if (php_sapi_name() !== 'cli') {
     die('404 Not Found');
 }
 
-require_once __DIR__ . '/defines.php';
+require_once __DIR__ . '/common.php';
 
-function check($dbPath = FF_CONSTS\DB_PATH): void
-{
-        // Try to connect to the database
-        $pdo = new PDO("sqlite:{$dbPath}");
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        
-        echo "Testing database connection... ";
-        
-        // Test basic query
-        $stmt = $pdo->query("SELECT COUNT(*) FROM sqlite_master WHERE type='table'");
-        $tableCount = $stmt->fetchColumn();
-        echo "OK (found {$tableCount} tables)\n";
-        
-        // Check integrity
-        echo "Checking database integrity... ";
-        $stmt = $pdo->query('PRAGMA integrity_check');
-        $result = $stmt->fetchColumn();
-        
-        if ($result === 'ok') {
-            echo "OK - Database appears to be healthy\n";
-            return;
-        } else {
-            echo "FAILED: {$result}\n";
-        }
-        
-
-}
-
-function create_db($dbPath = FF_CONSTS\DB_PATH): void
+function create_db($dbPath = DB_PATH): void
 {
     echo "Creating new database at: {$dbPath}\n";
     
@@ -47,21 +19,9 @@ function create_db($dbPath = FF_CONSTS\DB_PATH): void
     }
         
     try {
-        // Create new database connection
-        $pdo = new PDO("sqlite:{$dbPath}");
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo = get_db_connection($dbPath);
         
-        echo "Configuring database settings...\n";
-        
-        // Configure the database with optimal settings
-        $pdo->exec('PRAGMA journal_mode = WAL');
-        $pdo->exec('PRAGMA synchronous = NORMAL');
-        $pdo->exec('PRAGMA temp_store = MEMORY');
-        $pdo->exec('PRAGMA foreign_keys = ON');
-        
-        echo "Creating stories table...\n";
-        
-        // Create the stories table
+        echo "Creating stories table...\n";        
         $pdo->exec('
             CREATE TABLE stories (
                 id INTEGER PRIMARY KEY,
@@ -78,8 +38,6 @@ function create_db($dbPath = FF_CONSTS\DB_PATH): void
         ');
         
         echo "Creating ranks table...\n";
-        
-        // Create the ranks table with composite primary key and foreign key constraint
         $pdo->exec('
             CREATE TABLE ranks (
                 id INTEGER NOT NULL,
@@ -91,8 +49,6 @@ function create_db($dbPath = FF_CONSTS\DB_PATH): void
         ');
         
         echo "Creating database indices...\n";
-        
-        // Create indices for better performance
         $pdo->exec('CREATE INDEX idx_ranks_type_rank ON ranks(type, rank)');
         $pdo->exec('CREATE INDEX idx_story_timestamp ON stories(timestamp)');
         
@@ -112,28 +68,28 @@ function create_db($dbPath = FF_CONSTS\DB_PATH): void
 
 // Command line interface
 if (php_sapi_name() === 'cli') {
-    $options = getopt('h', ['db:', 'create', 'check', 'help']);
+    $options = getopt('h', ['db:', 'create', 'integrity', 'help']);
     
     if (isset($options['help'])) {
         echo "Usage: php database.php [options]\n";
         echo "Options:\n";
         echo "  --create        Create a new blank database\n";
         echo "  --check         Check the database for errors\n";
-        echo "  --db=PATH       Path to SQLite database (default: " . FF_CONSTS\DB_PATH . ")\n";
+        echo "  --db=PATH       Path to SQLite database (default: " . DB_PATH . ")\n";
         echo "  --help, h       Show this help message\n";
         echo "\nExamples:\n";
-        echo "  php database.php --check\n";
+        echo "  php database.php --integrity\n";
         echo "  php database.php --create\n";
         echo "  php database.php --create --db=/path/to/custom.db\n";
         exit(0);
     }
     
-    $db = $options['db'] ?? FF_CONSTS\DB_PATH;
+    $dbPath = $options['db'] ?? DB_PATH;
     
     if (isset($options['create'])) {
-        create_db($db);
-    } elseif (isset($options['check'])) {
-        check($db);
+        create_db($dbPath);
+    } elseif (isset($options['integrity'])) {
+        db_integrity_check(get_db_connection($dbPath));
     } else {
         echo "Please specify either --create or --repair. Use --help for more information.\n";
         exit(1);

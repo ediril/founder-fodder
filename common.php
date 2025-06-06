@@ -89,6 +89,26 @@ function get_db_connection($dbPath = DB_PATH): PDO
     return $pdo;
 }
 
+function db_integrity_check($pdo): bool {
+    // Test basic query
+    $stmt = $pdo->query("SELECT COUNT(*) FROM sqlite_master WHERE type='table'");
+    $tableCount = $stmt->fetchColumn();
+    echo "Connection OK (found {$tableCount} tables)\n";
+    
+    // Check integrity
+    echo "Checking DB integrity... ";
+    $stmt = $pdo->query('PRAGMA integrity_check');
+    $result = $stmt->fetchColumn();
+    
+    if ($result === 'ok') {
+        echo "HEALTHY\n";
+        return true;
+    }
+    
+    echo "FAILED: {$result}\n";
+    return false;
+}
+
 function close_db_connection(?PDO $conn): void {
     if ($conn !== null) {
         $conn = null;
