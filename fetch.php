@@ -622,7 +622,7 @@ if (php_sapi_name() === 'cli') {
     }
     
     $type = $options['type'] ?? 'all';
-    $limit = (int)($options['limit'] ?? FETCH_LIMIT);
+    $limit = (int)($options['limit'] ?? MAX_FETCH);
     $db = $options['db'] ?? DB_PATH;
     $storyId = isset($options['story-id']) ? (int)$options['story-id'] : null;
     

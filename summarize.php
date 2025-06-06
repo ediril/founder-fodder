@@ -833,7 +833,7 @@ try {
         }
     }
 
-    // TODO: Delete stories, comments and summaries if they were fetched over 6 months ago
+    // TODO: Delete stories, comments and summaries if they were fetched over 1 month ago
     
 } catch (Exception $e) {
     echo "ERROR: " . $e->getMessage() . "\n";

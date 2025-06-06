@@ -8,8 +8,8 @@ const STORY_TYPES = [
     "best" => 3,
 ];
 
-const MAX_COMMENTS_TO_FETCH = 3000;
-const FETCH_LIMIT = 200;
+const MAX_COMMENTS_TO_FETCH = 2500;
+const MAX_FETCH = 150;
 
 const FETCHER_LOCK_FILE_NAME = 'ff_fetch.lock';
 const SUMMARIZER_LOCK_FILE_NAME = 'ff_summarize.lock';
