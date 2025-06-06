@@ -29,14 +29,6 @@ error_reporting(E_ALL & ~E_DEPRECATED);
                     <span><i class="fa-solid fa-arrow-up pl-2"></i> <?php echo (int)$story['score']; ?></span>
                     <span><i class="fa-solid fa-comment pl-2"></i> <?php echo (int)$story['comments_count']; ?></span>
                 </div>
-                <h2 class="subtitle is-6 pt-3 has-text-white">
-                    <a href="<?php echo htmlspecialchars($story['url']); ?>" class="has-text-white">
-                        <i class="fa-solid fa-external-link"></i> Story
-                    </a>
-                    <a href="<?php echo htmlspecialchars($story['comments_url']); ?>" class="has-text-white">
-                        <i class="fa-solid fa-external-link pl-2"></i> Comments
-                    </a>
-                </h2>
             </div>
         </div>
     </section>
@@ -46,9 +38,12 @@ error_reporting(E_ALL & ~E_DEPRECATED);
             <div class="content">
                 <?php if ($has_story_summary): ?>
                 <div class="box summary-card">
-                    <h2 class="is-4 has-text-weight-bold">
+                    <h2 class="is-4 has-text-weight-bold mb-2">
                         <span class="icon has-text-primary"><i class="fa-regular fa-file-lines"></i></span>
                         Story Summary
+                        <a class="is-size-5" href="<?php echo htmlspecialchars($story['url']); ?>">
+                            <i class="fa-solid fa-external-link pl-2"></i> Story
+                        </a>
                     </h2>
                     <div class="summary-last-updated">                        
                         <p class="has-text-grey-light">Last updated: <?php echo htmlspecialchars($story_summary_last_updated); ?></p>
@@ -77,6 +72,19 @@ error_reporting(E_ALL & ~E_DEPRECATED);
                         // Convert Markdown to HTML using Parsedown
                         echo $parsedown->text($comments_summary);
                         ?>
+                    </div>
+                </div>
+                <?php else: ?>
+                <div class="box summary-card">
+                    <h2 class="is-4 has-text-weight-bold mb-2">
+                        <span class="icon has-text-primary"><i class="fa-regular fa-comments"></i></span>
+                        Comments Summary
+                        <a class="is-size-5" href="<?php echo htmlspecialchars($story['comments_url']); ?>">
+                            <i class="fa-solid fa-external-link pl-2"></i> Comments
+                        </a>
+                    </h2>
+                    <div class="summary-content markdown-body">
+                        Comments summary is not available.
                     </div>
                 </div>
                 <?php endif; ?>
