@@ -416,7 +416,7 @@ class HackerNewsFetcher
             foreach ($storyIds as $ranking => $storyId) {
                 $story = $this->fetchStoryDetails($storyId);
                 if ($story) {
-                    $this->storeStory($story, $storyType, $ranking);
+                    $this->storeStory($story, $typeId, $ranking);
                     $count++;
 
                 // Print progress every 10 stories
