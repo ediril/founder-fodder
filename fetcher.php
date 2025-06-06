@@ -470,12 +470,22 @@ class HackerNewsFetcher
             return false;
         }
 
-        // For single story fetch, we don't have ranking context, so use 0
-        // and don't shift existing rankings
-        $this->storeStory($story, 'byid', 0);
-        
-        echo "Successfully fetched and stored story {$storyId}\n";
-        return true;
+        try {
+            $this->pdo->beginTransaction();
+            
+            // For single story fetch, we don't have ranking context, so use 0
+            // and don't shift existing rankings
+            $this->storeStory($story, 'byid', 0);
+            
+            $this->pdo->commit();
+            echo "Successfully fetched and stored story {$storyId}\n";
+            return true;
+            
+        } catch (\Exception $e) {
+            $this->pdo->rollback();
+            echo "Error storing story {$storyId}: " . $e->getMessage() . "\n";
+            return false;
+        }
     }
 
     /**
