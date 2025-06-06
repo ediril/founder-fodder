@@ -550,20 +550,10 @@ class StorySummarizer {
         }
     }
 
-    public function processStory($story, $downloadOnly = false, $storyType = null) {
+    public function processStory($story, $downloadOnly = false) {
         $storySummaryFile = $this->outputDir . "/{$story['id']}-" . STORY_SUMMARY_FILE;
         if (file_exists($storySummaryFile)) {
             return;
-        }
-
-        // Monitor memory usage
-        $memoryUsage = memory_get_usage(true) / 1024 / 1024; // MB
-        echo "  Memory usage: " . number_format($memoryUsage, 1) . " MB\n";
-        
-        // Check if memory usage is getting too high (>100MB)
-        if ($memoryUsage > 100) {
-            echo "  WARNING: High memory usage detected, running garbage collection\n";
-            gc_collect_cycles();
         }
 
         logMessage("Processing content for story {$story['id']}");
@@ -573,12 +563,12 @@ class StorySummarizer {
             echo "Fetching story...\n";
             $storyContent = $this->fetchStoryContent($story['url']);
             
-            if (strlen($storyContent) > 750) {
+            if (strlen($storyContent) > MIN_STORY_LENGTH_FOR_SUMMARY) {
                 file_put_contents($storyFile, $storyContent);
                 echo "Saved story to {$storyFile}\n";
             } else {
-                echo "Story is too short to summarize (length: " . strlen($storyContent) . ")\n";
-                file_put_contents($storySummaryFile, "");
+                logMessage("  Story is too short to summarize (length: " . strlen($storyContent) . ")\n");
+                file_put_contents($storySummaryFile, "Story is too short to summarize");
                 return;
             }
         }
@@ -624,13 +614,12 @@ class StorySummarizer {
         gc_collect_cycles();
     }
 
-    public function processComments($story, $downloadOnly = false, $storyType = null) {
-        if ($storyType == 'new') {
-            echo "  Skipping comments processing for new stories\n";
+    public function processComments($story, $downloadOnly = false, $storyTypes) {
+        if (str_contains( $storyTypes, STORY_TYPES["new"])) {
+            logMessage("  Skipping comments processing for new story: {$story['id']}");
             return;
         }
 
-        logMessage("Processing comments for story {$story['id']}");
         $commentsSummaryFile = $this->outputDir . "/{$story['id']}-" . COMMENTS_SUMMARY_FILE;
         if (file_exists($commentsSummaryFile)) {
             if ($story['fetched_at'] + 3600 * 72 < time()) {
@@ -645,6 +634,7 @@ class StorySummarizer {
             unlink($commentsSummaryFile);
         }
 
+        logMessage("Processing comments for story {$story['id']}");
         $commentsContent = "";
         $commentsFile = $this->originalsDir . "/{$story['id']}-comments.txt";
         if (!file_exists($commentsFile) && $story['comments_url']) {
@@ -730,15 +720,18 @@ class StorySummarizer {
             
             $storyCnt = 0;
             while ($story = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                // Check memory usage before processing
+                // Monitor memory usage
                 $memoryUsage = memory_get_usage(true) / 1024 / 1024; // MB
-                if ($memoryUsage > 120) {
-                    logMessage("Memory usage too high ({$memoryUsage}MB), stopping processing");
-                    break;
+                echo "  Memory usage: " . number_format($memoryUsage, 1) . " MB\n";
+                
+                // Check if memory usage is getting too high (>100MB)
+                if ($memoryUsage > 100) {
+                    echo "  WARNING: High memory usage detected, running garbage collection\n";
+                    gc_collect_cycles();
                 }
                 
-                $this->processStory($story, $downloadOnly, $storyType);
-                $this->processComments($story, $downloadOnly, $storyType);
+                $this->processStory($story, $downloadOnly);
+                $this->processComments($story, $downloadOnly, STORY_TYPES[$storyType]);
                 
                 $storyCnt++;
                 if ($limit > 0 && $storyCnt == $limit) {
@@ -757,27 +750,24 @@ class StorySummarizer {
     }
     
     /**
-     * Process a single story by ID
+     * Process a single story by ID (for debugging purposes)
      */
     public function processStoryById($storyId, $downloadOnly = false) {
         try {
             $stmt = $this->pdo->prepare('
-                SELECT s.id, s.title, s.url, s.domain, s.comments_url, s.comments_count, s.fetched_at, r.type
+                SELECT s.id, s.title, s.url, s.domain, s.comments_url, s.comments_count, s.fetched_at, 
+					GROUP_CONCAT(r.type) AS types
                 FROM stories s
                 INNER JOIN ranks r ON s.id = r.id
                 WHERE s.id = ?
-                LIMIT 1
+				GROUP BY s.id
             ');
             $stmt->execute([$storyId]);
             
             $story = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($story) {
-                // Convert type ID back to string
-                $typeMap = array_flip(STORY_TYPES);
-                $storyTypeString = $typeMap[$story['type']] ?? throw new Exception("Unknown type for story-id {$storyId}");
-                
-                $this->processStory($story, $downloadOnly, $storyTypeString);
-                $this->processComments($story, $downloadOnly, $storyTypeString);
+            if ($story) {                
+                $this->processStory($story, $downloadOnly);
+                $this->processComments($story, $downloadOnly, $story['types']);
             } else {
                 logMessage("Story ID {$storyId} not found in database.");
             }
@@ -795,20 +785,20 @@ $options = getopt('h', [
     'output:',
     'download-only',
     'dry-run',
-    'story-id:',
+    'id:',
     'help'
 ]);
 
 if (isset($options['help']) || isset($options['h'])) {
     echo "Usage: php summarize.php [options]\n";
     echo "Options:\n";
-    echo "  --type=TYPE        Type of stories to summarize (top, new, best, all) [default: all]\n";
+    echo "  --type=STORY-TYPE  Type of stories to summarize (top, new, best, all) [default: all]\n";
     echo "  --limit=N          Maximum number of stories to process per type [default: 100]\n";
     echo "  --db=PATH          Path to SQLite database [default: " . DB_PATH . "]\n";
     echo "  --output=PATH      Output directory for content files [default: " . OUTPUT_DIR . "]\n";
     echo "  --download-only    Download story and comments content without summarizing\n";
     echo "  --dry-run          Process and show what would be summarized without calling Gemini API\n";
-    echo "  --story-id=ID      Process a single story by ID\n";
+    echo "  --id=STORY-ID     Process a single story by ID\n";
     echo "  --help, -h         Show this help message\n";
     exit(0);
 }
@@ -819,7 +809,7 @@ $dbPath = $options['db'] ?? DB_PATH;
 $outputDir = $options['output'] ?? OUTPUT_DIR;
 $downloadOnly = isset($options['download-only']);
 $dryRun = isset($options['dry-run']);
-$storyId = isset($options['story-id']) ? (int)$options['story-id'] : null;
+$storyId = isset($options['id']) ? (int)$options['id'] : null;
 
 print("storyType: {$storyType}\n");
 print("limit: {$limit}\n");
