@@ -722,11 +722,10 @@ class StorySummarizer {
             while ($story = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 // Monitor memory usage
                 $memoryUsage = memory_get_usage(true) / 1024 / 1024; // MB
-                echo "  Memory usage: " . number_format($memoryUsage, 1) . " MB\n";
                 
                 // Check if memory usage is getting too high (>100MB)
                 if ($memoryUsage > 100) {
-                    echo "  WARNING: High memory usage detected, running garbage collection\n";
+                    echo "  WARNING: High memory usage: " . number_format($memoryUsage, 1) . " MB, running garbage collection\n";
                     gc_collect_cycles();
                 }
                 
