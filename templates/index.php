@@ -70,24 +70,24 @@
                             <a href="<?php echo htmlspecialchars($story['url']); ?>">
                                 <?php echo htmlspecialchars($story['title']); ?>
                             </a>
+                            <span class="pr-2 pb-1 has-text-grey is-size-6">(<?php echo htmlspecialchars($story['domain']); ?>)</span>
                         </p>
                         <p class="subtitle is-6">
                             <span class="pr-2 pb-1"><i class="fa-solid fa-clock"></i> <?php echo htmlspecialchars($story['time_ago']); ?></span>
-                            <span class="pr-2 pb-1"><i class="fas fa-globe"></i> <?php echo htmlspecialchars($story['domain']); ?></span>
                             <span class="pr-2"><i class="fa-solid fa-arrow-up"></i> <?php echo (int)$story['score']; ?></span>
+                            <span class="pr-2"><i class="fa-solid fa-comment"></i> <?php echo (int)$story['comments_count']; ?></span>
                         </p>
                         <div class="story-actions">
-                            <a href="<?php echo htmlspecialchars($story['comments_url']); ?>" class="button is-small pl-3">
-                                <span class="icon"><i class="fa-regular fa-comment"></i></span>
-                                <span><?php echo (int)$story['comments_count']; ?></span>
-                            </a>
                             <?php 
                             $summary_files = $story['summary_files'] ?? ['has_story_summary' => false, 'has_comments_summary' => false];
                             if ($summary_files['has_story_summary'] || $summary_files['has_comments_summary']): 
                             ?>
                             <a href="/summary/<?php echo htmlspecialchars($story['id']); ?>" class="button is-small pl-3">
-                                <span class="icon"><i class="fa-regular fa-file-lines"></i></span>
                                 <span>Summary</span>
+                            </a>
+                            <?php else: ?>
+                            <a href="<?php echo htmlspecialchars($story['comments_url']); ?>" class="button is-small pl-3">
+                                <span>Comments</span>
                             </a>
                             <?php endif; ?>
                         </div>

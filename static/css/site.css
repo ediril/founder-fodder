@@ -357,6 +357,24 @@ body {
     text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+.summary-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.summary-title a {
+    color: white;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.summary-title a:hover {
+    color: rgba(255,255,255,0.9);
+    text-decoration: underline;
+}
+
 .summary-hero .subtitle a {
     border-bottom: 1px dashed rgba(255,255,255,0.5);
     transition: all 0.3s ease;

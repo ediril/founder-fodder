@@ -14,31 +14,27 @@ error_reporting(E_ALL & ~E_DEPRECATED);
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="<?php echo asset_url('/static/css/site.css'); ?>">
-    <!-- Add Markdown CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown.css">
 </head>
 <body>
     <section class="hero is-small summary-hero">
         <div class="hero-body">
             <div class="container">
-                <a href="/" class="back-button">
-                    <span class="icon"><i class="fa-solid fa-arrow-left"></i></span>
-                    <span>Back to Stories</span>
-                </a>
-                <h1 class="title is-2 has-text-white">
+                <h1 class="summary-title">
                     <?php echo htmlspecialchars($story['title']); ?>
                 </h1>
-                <p class="subtitle is-6 pt-1">
+                <div class="subtitle is-6 pt-1 mb-2">
                     <span><i class="fa-solid fa-clock"></i> <?php echo htmlspecialchars($story['time_ago']); ?></span>
                     <span><i class="fas fa-globe pl-2"></i> <?php echo htmlspecialchars($story['domain']); ?></span>
                     <span><i class="fa-solid fa-arrow-up pl-2"></i> <?php echo (int)$story['score']; ?></span>
-                </p>
+                    <span><i class="fa-solid fa-comment pl-2"></i> <?php echo (int)$story['comments_count']; ?></span>
+                </div>
                 <h2 class="subtitle is-6 pt-3 has-text-white">
                     <a href="<?php echo htmlspecialchars($story['url']); ?>" class="has-text-white">
-                        <i class="fa-solid fa-external-link"></i> Original Story
+                        <i class="fa-solid fa-external-link"></i> Story
                     </a>
                     <a href="<?php echo htmlspecialchars($story['comments_url']); ?>" class="has-text-white">
-                        <i class="fa-solid fa-external-link pl-2"></i> HN Comments
+                        <i class="fa-solid fa-external-link pl-2"></i> Comments
                     </a>
                 </h2>
             </div>
