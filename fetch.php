@@ -28,15 +28,10 @@ class HackerNewsFetcher
         $this->imgDir = $imgDir;
         $this->lockHandle = acquireLock(FETCHER_LOCK_FILE_NAME);
 
-        // Set up signal handlers for cleanup
-        if (function_exists('pcntl_signal')) {
-            pcntl_signal(SIGTERM, 'handleSignal');
-            pcntl_signal(SIGINT, 'handleSignal');
-        }
-        
-        // Set up shutdown function for cleanup
-        register_shutdown_function([$this, 'releaseResources']);
-        
+        setup_signal_handlers();
+        register_shutdown_function([$this, 'releaseResources']);        
+        check_if_other_process_running(SUMMARIZER_LOCK_FILE_NAME);
+
         $this->pdo = get_db_connection($dbPath);
         
         // Ensure image directory exists
@@ -66,10 +61,7 @@ class HackerNewsFetcher
             ]
         ]);
 
-        // Dispatch signals before making the request
-        if (function_exists('pcntl_signal_dispatch')) {
-            pcntl_signal_dispatch();
-        }
+        dispatch_signal();
 
         if ($headersOnly) {
             return @get_headers($url, true, $context);

@@ -18,13 +18,13 @@ function acquireLock(string $lockName) {
     $lockFile = __DIR__ . '/' . $lockName;       
     $lockHandle = fopen($lockFile, 'c');
     if (!$lockHandle) {
-        throw new \Exception("Cannot create lock file: {$lockFile}");
+        throw new Exception("Cannot create lock file: {$lockFile}");
     }
 
     // Try to get an exclusive lock
     if (!flock($lockHandle, LOCK_EX | LOCK_NB)) {
         fclose($lockHandle);
-        throw new \Exception("Another instance of FETCH is already running");
+        throw new Exception("Another instance of FETCH is already running");
     }
 
     logMessage("Acquired process lock (PID: " . getmypid() . ")");
@@ -51,14 +51,29 @@ function handleSignal(int $signal): void {
     exit(0);
 }
 
+// Handle signals (CTRL+C, etc.)
+function dispatch_signal(): void {
+    if (function_exists('pcntl_signal_dispatch')) {
+        pcntl_signal_dispatch();
+    }
+}
+
+declare(ticks = 1);
+function setup_signal_handlers(): void {
+    if (function_exists('pcntl_signal')) {
+        pcntl_signal(SIGTERM, 'handleSignal');
+        pcntl_signal(SIGINT, 'handleSignal');
+    }
+}
+
 function get_db_connection($dbPath = DB_PATH): PDO
 {
     if (!file_exists($dbPath)) {
         throw new Exception("Database file not found: {$dbPath}");
     }
 
-    $pdo = new \PDO("sqlite:{$dbPath}");
-    $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+    $pdo = new PDO("sqlite:{$dbPath}");
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
     // Configure SQLite for better reliability and performance
@@ -75,6 +90,28 @@ function close_db_connection(?PDO $conn): void {
     if ($conn !== null) {
         $conn = null;
     }
+}
+
+function check_if_other_process_running(string $lockName, int $timeout = 60): void {
+    $waitTime = 0;
+    $first = true;
+    do {
+        if (file_exists(__DIR__ . '/' . $lockName)) {
+            if ($first) {
+                $first = false;
+                logMessage("Waiting for {$lockName} to stop running");
+            }
+            $waitTime += 3;
+            sleep(3);
+            dispatch_signal();
+        } else {
+            logMessage("OK, {$lockName} stopped");
+            break;
+        }
+        if ($waitTime >= $timeout) {
+            throw new Exception("{$lockName} is still running");
+        }
+    } while(true);
 }
 
 function debugLog($message) {

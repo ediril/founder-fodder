@@ -48,15 +48,17 @@ class StorySummarizer {
     public function __construct($dbPath = DB_PATH, $outputDir = OUTPUT_DIR, $originalsDir = ORIGINALS_DIR, $dryRun = false) {
         $this->lockHandle = acquireLock(SUMMARIZER_LOCK_FILE_NAME);
 
-        // Set up signal handlers for cleanup
-        if (function_exists('pcntl_signal')) {
-            pcntl_signal(SIGTERM, 'handleSignal');
-            pcntl_signal(SIGINT, 'handleSignal');
-        }
-        
-        // Set up shutdown function for cleanup
+        setup_signal_handlers();
         register_shutdown_function([$this, 'releaseResources']);
 
+        check_if_other_process_running(FETCHER_LOCK_FILE_NAME);
+
+        // write PID to lock file
+        ftruncate($this->lockHandle, 0);
+        fwrite($this->lockHandle, getmypid() . "\n" . date('Y-m-d H:i:s') . "\n");
+        fflush($this->lockHandle);
+
+        // is the other process running?
         $this->outputDir = $outputDir;
         $this->originalsDir = $originalsDir;
         $this->dryRun = $dryRun;
@@ -120,10 +122,7 @@ class StorySummarizer {
             ]
         ]);
 
-        // Dispatch signals before making the request
-        if (function_exists('pcntl_signal_dispatch')) {
-            pcntl_signal_dispatch();
-        }
+        dispatch_signal();
 
         return @file_get_contents($url, false, $context);
     }
@@ -229,10 +228,7 @@ class StorySummarizer {
         $allComments = [];
         
         foreach ($batches as $batchIndex => $batch) {
-            // Handle signals (CTRL+C, etc.)
-            if (function_exists('pcntl_signal_dispatch')) {
-                pcntl_signal_dispatch();
-            }
+            dispatch_signal();
             
             echo "    Processing batch " . ($batchIndex + 1) . "/" . count($batches) . " (" . count($batch) . " comments)...\n";
             
@@ -259,10 +255,7 @@ class StorySummarizer {
                 curl_multi_exec($multiHandle, $running);
                 curl_multi_select($multiHandle);
                 
-                // Handle signals during the curl operations
-                if (function_exists('pcntl_signal_dispatch')) {
-                    pcntl_signal_dispatch();
-                }
+                dispatch_signal();
             } while ($running > 0);
             
             // Collect results
@@ -300,11 +293,6 @@ class StorySummarizer {
         
         // Keep collecting until queue is empty or we have enough IDs
         while (!empty($queue) && count($allIds) < MAX_COMMENTS_TO_FETCH) {
-            // Handle signals (CTRL+C, etc.)
-            if (function_exists('pcntl_signal_dispatch')) {
-                pcntl_signal_dispatch();
-            }
-            
             $remaining = MAX_COMMENTS_TO_FETCH - count($allIds);
             $currentBatch = array_splice($queue, 0, min(50, $remaining)); // Process in batches of 50
             $allIds = array_merge($allIds, $currentBatch);
@@ -403,11 +391,6 @@ class StorySummarizer {
         $batches = array_chunk($allCommentIds, 50);
         
         foreach ($batches as $batchIndex => $batch) {
-            // Handle signals (CTRL+C, etc.)
-            if (function_exists('pcntl_signal_dispatch')) {
-                pcntl_signal_dispatch();
-            }
-            
             if (count($allComments) >= MAX_COMMENTS_TO_FETCH) {
                 echo "  Reached limit of " . MAX_COMMENTS_TO_FETCH . " valid comments\n";
                 break;
@@ -831,10 +814,6 @@ if (isset($options['story-id'])) {
 
 try {
     $summarizer = new StorySummarizer($dbPath, $outputDir, ORIGINALS_DIR, $dryRun);
-    
-    sleep(20);
-    exit(0);
-
 
     if ($storyId) {
         $summarizer->processStoryById($storyId, $downloadOnly);
