@@ -31,7 +31,7 @@ class HackerNewsFetcher
     private $lockHandle;
     private ?\PDO $pdo = null;
 
-    public function __construct(string $dbPath = DB_PATH, string $imgDir = "static/img/stories")
+    public function __construct(string $dbPath = FF_CONSTS\DB_PATH, string $imgDir = "static/img/stories")
     {
         $this->dbPath = $dbPath;
         $this->imgDir = $imgDir;
@@ -121,28 +121,7 @@ class HackerNewsFetcher
         $this->pdo->exec('PRAGMA synchronous = NORMAL');
         $this->pdo->exec('PRAGMA temp_store = MEMORY');
         $this->pdo->exec('PRAGMA mmap_size = 268435456'); // 256MB
-        
-        // Create the stories table if it doesn't exist
-        $this->pdo->exec('
-            CREATE TABLE IF NOT EXISTS stories (
-                id INTEGER PRIMARY KEY,
-                title TEXT,
-                url TEXT,
-                domain TEXT,
-                comments_url TEXT,
-                comments_count INTEGER,
-                score INTEGER,
-                user TEXT,
-                timestamp INTEGER,
-                fetched_at INTEGER,
-                type TEXT,
-                ranking INTEGER
-            )
-        ');
-        
-        // Create indices for faster queries
-        $this->pdo->exec('CREATE INDEX IF NOT EXISTS idx_story_type ON stories(type, ranking)');
-        $this->pdo->exec('CREATE INDEX IF NOT EXISTS idx_story_timestamp ON stories(timestamp)');
+        $this->pdo->exec('PRAGMA foreign_keys = ON');
     }
 
     private function fetchUrl(string $url, int $timeout = 30, bool $headersOnly = false): string|array|false
@@ -398,6 +377,7 @@ class HackerNewsFetcher
         $user = $story['by'] ?? '';
         $timestamp = $story['time'] ?? 0;
         $fetchedAt = time();
+        $typeId = FF_CONSTS\STORY_TYPES[$storyType] ?? 0;
 
         // Check if story already exists in the database
         $stmt = $this->pdo->prepare('SELECT id FROM stories WHERE id = ?');
@@ -433,25 +413,50 @@ class HackerNewsFetcher
                 UPDATE stories
                 SET title = ?, url = ?, domain = ?, comments_url = ?,
                     comments_count = ?, score = ?, user = ?,
-                    timestamp = ?, fetched_at = ?, type = ?, ranking = ?
+                    timestamp = ?, fetched_at = ?
                 WHERE id = ?
             ');
             $stmt->execute([
                 $title, $url, $domain, $commentsUrl, $commentsCount, $score,
-                $user, $timestamp, $fetchedAt, $storyType, $ranking, $storyId
+                $user, $timestamp, $fetchedAt, $storyId
             ]);
         } else {
             // Insert new story
             $stmt = $this->pdo->prepare('
                 INSERT INTO stories
                 (id, title, url, domain, comments_url, comments_count, 
-                 score, user, timestamp, fetched_at, type, ranking)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 score, user, timestamp, fetched_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ');
             $stmt->execute([
                 $storyId, $title, $url, $domain, $commentsUrl, $commentsCount,
-                $score, $user, $timestamp, $fetchedAt, $storyType, $ranking
+                $score, $user, $timestamp, $fetchedAt
             ]);
+        }
+
+        // Handle ranking data separately
+        if ($typeId > 0 && $ranking >= 0) {
+            // Check if rank entry already exists
+            $stmt = $this->pdo->prepare('SELECT id FROM ranks WHERE id = ? AND type = ?');
+            $stmt->execute([$storyId, $typeId]);
+            $existingRank = $stmt->fetch();
+
+            if ($existingRank) {
+                // Update existing rank
+                $stmt = $this->pdo->prepare('
+                    UPDATE ranks
+                    SET rank = ?
+                    WHERE id = ? AND type = ?
+                ');
+                $stmt->execute([$ranking, $storyId, $typeId]);
+            } else {
+                // Insert new rank
+                $stmt = $this->pdo->prepare('
+                    INSERT INTO ranks (id, type, rank)
+                    VALUES (?, ?, ?)
+                ');
+                $stmt->execute([$storyId, $typeId, $ranking]);
+            }
         }
     }
 
@@ -472,15 +477,19 @@ class HackerNewsFetcher
         try {
             $this->pdo->beginTransaction();
             
-            // Shift down the rankings of existing stories that aren't being refetched
-            $placeholders = str_repeat('?,', count($storyIds) - 1) . '?';
-            $stmt = $this->pdo->prepare("
-                UPDATE stories 
-                SET ranking = ranking + ?
-                WHERE type = ? AND id NOT IN ({$placeholders})
-            ");
-            $params = array_merge([$newStoriesCount, $storyType], $storyIds);
-            $stmt->execute($params);
+            // Get the type ID for this story type
+            $typeId = FF_CONSTS\STORY_TYPES[$storyType] ?? 0;
+            if ($typeId > 0) {
+                // Shift down the rankings of existing stories that aren't being refetched
+                $placeholders = str_repeat('?,', count($storyIds) - 1) . '?';
+                $stmt = $this->pdo->prepare("
+                    UPDATE ranks 
+                    SET rank = rank + ?
+                    WHERE type = ? AND id NOT IN ({$placeholders})
+                ");
+                $params = array_merge([$newStoriesCount, $typeId], $storyIds);
+                $stmt->execute($params);
+            }
 
             $count = 0;
             foreach ($storyIds as $ranking => $storyId) {
@@ -689,8 +698,8 @@ if (php_sapi_name() === 'cli') {
     }
     
     $type = $options['type'] ?? 'all';
-    $limit = (int)($options['limit'] ?? 100);
-    $db = $options['db'] ?? DB_PATH;
+    $limit = (int)($options['limit'] ?? FF_CONSTS\FETCH_LIMIT);
+    $db = $options['db'] ?? FF_CONSTS\DB_PATH;
     $storyId = isset($options['story-id']) ? (int)$options['story-id'] : null;
     
     $validTypes = ['top', 'new', 'best', 'all'];

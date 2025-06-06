@@ -10,7 +10,7 @@ require_once __DIR__ . '/defines.php';
  * Connect to the SQLite database
  */
 function get_db_connection(): PDO {
-    $db_file = DB_PATH;
+    $db_file = FF_CONSTS\DB_PATH;
     if (!file_exists($db_file)) {
         throw new Exception("Database file not found: {$db_file}");
     }
@@ -55,126 +55,41 @@ function format_time_ago(int $timestamp): string {
 }
 
 /**
- * API endpoint to get stories
- */
-function get_stories(): array {
-    try {
-        // Parse request parameters
-        $story_type = $_GET['type'] ?? 'top';
-        $page = (int)($_GET['page'] ?? 1);
-        $per_page = (int)($_GET['per_page'] ?? 30);
-        
-        // Log debugging info
-        debugLog("get_stories called with type: $story_type, page: $page, per_page: $per_page");
-        
-        // Calculate offset for pagination
-        $offset = ($page - 1) * $per_page;
-        
-        try {
-            $conn = get_db_connection();
-            debugLog("Database connection established");
-        } catch (Exception $e) {
-            debugLog("Database connection failed: " . $e->getMessage());
-            http_response_code(500);
-            return ["error" => "Database connection failed: " . $e->getMessage()];
-        }
-        
-        // Check if the database file exists
-        if (!file_exists(DB_PATH)) {
-            debugLog("Database file not found: " . DB_PATH);
-            return ["error" => "Database file not found"];
-        }
-        
-        // Get stories by type, ordered by ranking
-        try {
-            $stmt = $conn->prepare('
-                SELECT id, title, url, domain, comments_url, comments_count, 
-                       score, user, timestamp, type, ranking
-                FROM stories
-                WHERE type = ?
-                ORDER BY ranking
-                LIMIT ? OFFSET ?
-            ');
-            $stmt->execute([$story_type, $per_page, $offset]);
-            
-            // Convert to array of associative arrays
-            $stories = [];
-            $story_ids = [];
-            while ($row = $stmt->fetch()) {
-                // Add additional fields
-                $row['time_ago'] = format_time_ago((int)$row['timestamp']);
-                $row['formatted_time'] = date("Y-m-d H:i:s", (int)$row['timestamp']);
-                
-                $stories[] = $row;
-                $story_ids[] = $row['id'];
-            }
-            
-            // Batch check image and summary files for all stories at once
-            if (!empty($story_ids)) {
-                $image_files = batch_check_image_files($story_ids);
-                $summary_files = batch_check_summary_files($story_ids);
-                
-                // Add file information to each story
-                foreach ($stories as &$story) {
-                    // Generate image URL based on story ID if the image exists
-                    if ($image_files[$story['id']] ?? false) {
-                        $story['image_url'] = "/static/img/stories/{$story['id']}.jpg";
-                    } else {
-                        $story['image_url'] = "";
-                    }
-                    
-                    $story['summary_files'] = $summary_files[$story['id']] ?? [
-                        'has_story_summary' => false,
-                        'has_comments_summary' => false
-                    ];
-                }
-                unset($story); // Clean up reference
-            }
-            
-            debugLog("Retrieved " . count($stories) . " stories from database");
-            return $stories;
-        } catch (Exception $e) {
-            debugLog("Database query failed: " . $e->getMessage());
-            http_response_code(500);
-            return ["error" => "Database query failed: " . $e->getMessage()];
-        } finally {
-            close_db_connection($conn);
-        }
-    } catch (Exception $e) {
-        debugLog("Unexpected error in get_stories: " . $e->getMessage());
-        http_response_code(500);
-        return ["error" => "Unexpected error: " . $e->getMessage()];
-    }
-}
-
-/**
  * Get stories for a specific page with pagination
  */
-function get_page_stories(string $story_type = 'top', int $page = 1, int $per_page = STORIES_PER_PAGE): array {
+function get_page_stories(string $story_type = 'top', int $page = 1, int $per_page = FF_CONSTS\STORIES_PER_PAGE): array {
     try {
         // Calculate offset for pagination
         $offset = ($page - 1) * $per_page;
         
         debugLog("Getting page stories: type=$story_type, page=$page, per_page=$per_page, offset=$offset");
         
+        // Get type ID for the story type
+        $type_id = FF_CONSTS\STORY_TYPES[$story_type] ?? null;
+        if (!$type_id) {
+            debugLog("Invalid story type: $story_type");
+            throw new Exception("Invalid story type: $story_type");
+        }
+        
         $conn = get_db_connection();
         
         // Get total count for pagination
-        $stmt = $conn->prepare('SELECT COUNT(*) as total FROM stories WHERE type = ?');
-        $stmt->execute([$story_type]);
+        $stmt = $conn->prepare('SELECT COUNT(*) as total FROM ranks WHERE type = ?');
+        $stmt->execute([$type_id]);
         $result = $stmt->fetch();
         $total = (int)($result['total'] ?? 0);
         
         // Get stories by type, ordered by ranking
         $stmt = $conn->prepare('
-            SELECT id, title, url, domain, comments_url, comments_count, 
-                   score, user, timestamp, type, ranking
-            FROM stories
-            WHERE type = ?
-            ORDER BY ranking
+            SELECT s.id, s.title, s.url, s.domain, s.comments_url, s.comments_count, 
+                   s.score, s.user, s.timestamp, r.type, r.rank as ranking
+            FROM stories s
+            INNER JOIN ranks r ON s.id = r.id
+            WHERE r.type = ?
+            ORDER BY r.rank
             LIMIT ? OFFSET ?
         ');
-        $stmt->execute([$story_type, $per_page, $offset]);
+        $stmt->execute([$type_id, $per_page, $offset]);
         
         // Convert to array of associative arrays
         $stories = [];
@@ -184,20 +99,23 @@ function get_page_stories(string $story_type = 'top', int $page = 1, int $per_pa
             $row['time_ago'] = format_time_ago((int)$row['timestamp']);
             $row['formatted_time'] = date("Y-m-d H:i:s", (int)$row['timestamp']);
             
+            // Convert type ID back to string for compatibility
+            $row['type'] = $story_type;
+            
             $stories[] = $row;
             $story_ids[] = $row['id'];
         }
         
         // Batch check image and summary files for all stories at once
         if (!empty($story_ids)) {
-            $image_files = batch_check_image_files($story_ids);
+            $image_file_types = batch_check_image_files($story_ids);
             $summary_files = batch_check_summary_files($story_ids);
             
             // Add file information to each story
             foreach ($stories as &$story) {
                 // Generate image URL based on story ID if the image exists
-                if ($image_files[$story['id']] ?? false) {
-                    $story['image_url'] = "/static/img/stories/{$story['id']}.jpg";
+                if ($image_file_types[$story['id']] ?? false) {
+                    $story['image_url'] = "/static/img/stories/{$story['id']}.{$image_file_types[$story['id']]}";
                 } else {
                     $story['image_url'] = "";
                 }
@@ -253,7 +171,11 @@ function batch_check_image_files(array $story_ids): array {
     
     foreach ($story_ids as $story_id) {
         $img_path = "static/img/stories/{$story_id}.jpg";
-        $results[$story_id] = file_exists($img_path);
+        $results[$story_id] = file_exists($img_path) ? "jpg" : null;
+        if (!$results[$story_id]) {
+            $img_path = "static/img/stories/{$story_id}.png";
+            $results[$story_id] = file_exists($img_path) ? "png" : null;
+        }
     }
     
     return $results;
@@ -338,14 +260,23 @@ if ($path === '/' || $path === '/index.php') {
     // Get stories for the main page
     $story_type = $_GET['type'] ?? 'top';
     $page = max(1, (int)($_GET['page'] ?? 1));
-    $per_page = STORIES_PER_PAGE; // Use the constant
+    $per_page = FF_CONSTS\STORIES_PER_PAGE; // Use the constant
     
     // Get stories for current page
     $stories = get_page_stories($story_type, $page, $per_page);
     
-    $db = new SQLite3(DB_PATH);
-    $result = $db->querySingle("select max(fetched_at) as max_ts from stories where type = '" . $story_type . "'", true);
-    $last_updated = $result['max_ts'];
+    $db = new SQLite3(FF_CONSTS\DB_PATH);
+    $type_id = FF_CONSTS\STORY_TYPES[$story_type] ?? null;
+    if ($type_id) {
+        $result = $db->querySingle("
+            SELECT MAX(s.fetched_at) as max_ts 
+            FROM stories s 
+            INNER JOIN ranks r ON s.id = r.id 
+            WHERE r.type = " . intval($type_id), true);
+        $last_updated = $result['max_ts'];
+    } else {
+        $last_updated = null;
+    }
 
     // Include the template with stories data
     include 'templates/index.php';
@@ -355,7 +286,7 @@ if ($path === '/' || $path === '/index.php') {
     $story_id = $matches[1];
     
     // Get story details from database
-    $db = new SQLite3(DB_PATH);
+    $db = new SQLite3(FF_CONSTS\DB_PATH);
     $story = $db->querySingle("SELECT * FROM stories WHERE id = " . intval($story_id), true);
     $story['time_ago'] = format_time_ago((int)$story['timestamp']);
 

@@ -8,7 +8,7 @@ if (php_sapi_name() !== 'cli') {
 
 require_once __DIR__ . '/defines.php';
 
-function check($dbPath = DB_PATH): void
+function check($dbPath = FF_CONSTS\DB_PATH): void
 {
         // Try to connect to the database
         $pdo = new PDO("sqlite:{$dbPath}");
@@ -36,7 +36,7 @@ function check($dbPath = DB_PATH): void
 
 }
 
-function create_db($dbPath = DB_PATH): void
+function create_db($dbPath = FF_CONSTS\DB_PATH): void
 {
     echo "Creating new database at: {$dbPath}\n";
     
@@ -65,15 +65,15 @@ function create_db($dbPath = DB_PATH): void
         $pdo->exec('
             CREATE TABLE stories (
                 id INTEGER PRIMARY KEY,
-                title TEXT,
-                url TEXT,
-                domain TEXT,
-                comments_url TEXT,
-                comments_count INTEGER,
-                score INTEGER,
-                user TEXT,
-                timestamp INTEGER,
-                fetched_at INTEGER
+                title TEXT NOT NULL,
+                url TEXT NOT NULL,
+                domain TEXT NOT NULL,
+                comments_url TEXT NOT NULL,
+                comments_count INTEGER NOT NULL,
+                score INTEGER NOT NULL,
+                user TEXT NOT NULL,
+                timestamp INTEGER NOT NULL,
+                fetched_at INTEGER NOT NULL
             )
         ');
         
@@ -82,8 +82,8 @@ function create_db($dbPath = DB_PATH): void
         // Create the ranks table with composite primary key and foreign key constraint
         $pdo->exec('
             CREATE TABLE ranks (
-                id INTEGER,
-                type INTEGER,
+                id INTEGER NOT NULL,
+                type INTEGER NOT NULL,
                 rank INTEGER,
                 PRIMARY KEY (id, type),
                 FOREIGN KEY (id) REFERENCES stories(id) ON DELETE CASCADE
@@ -97,7 +97,6 @@ function create_db($dbPath = DB_PATH): void
         $pdo->exec('CREATE INDEX idx_story_timestamp ON stories(timestamp)');
         
         echo "Database created successfully!\n";
-        echo "Location: {$dbPath}\n";
         
     } catch (PDOException $e) {
         echo "Error creating database: " . $e->getMessage() . "\n";
@@ -120,7 +119,7 @@ if (php_sapi_name() === 'cli') {
         echo "Options:\n";
         echo "  --create        Create a new blank database\n";
         echo "  --check         Check the database for errors\n";
-        echo "  --db=PATH       Path to SQLite database (default: " . DB_PATH . ")\n";
+        echo "  --db=PATH       Path to SQLite database (default: " . FF_CONSTS\DB_PATH . ")\n";
         echo "  --help, h       Show this help message\n";
         echo "\nExamples:\n";
         echo "  php database.php --check\n";
@@ -129,7 +128,7 @@ if (php_sapi_name() === 'cli') {
         exit(0);
     }
     
-    $db = $options['db'] ?? DB_PATH;
+    $db = $options['db'] ?? FF_CONSTS\DB_PATH;
     
     if (isset($options['create'])) {
         create_db($db);
