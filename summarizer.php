@@ -1,5 +1,7 @@
 <?php
 
+const BATCH_SIZE = 25;
+
 // Security: Only allow execution from command line
 if (php_sapi_name() !== 'cli') {
     http_response_code(404);
@@ -218,7 +220,7 @@ class StorySummarizer {
     /**
      * Fetch multiple comments concurrently using curl_multi
      */
-    private function fetchCommentsBatch($commentIds, $batchSize = 50) {
+    private function fetchCommentsBatch($commentIds, $batchSize = BATCH_SIZE) {
         if (empty($commentIds)) {
             return [];
         }
@@ -294,7 +296,7 @@ class StorySummarizer {
         // Keep collecting until queue is empty or we have enough IDs
         while (!empty($queue) && count($allIds) < MAX_COMMENTS_TO_FETCH) {
             $remaining = MAX_COMMENTS_TO_FETCH - count($allIds);
-            $currentBatch = array_splice($queue, 0, min(50, $remaining)); // Process in batches of 50
+            $currentBatch = array_splice($queue, 0, min(BATCH_SIZE, $remaining)); // Process in batches of 20
             $allIds = array_merge($allIds, $currentBatch);
             
             // Fetch this batch to get reply IDs (only if we still need more)
@@ -388,7 +390,7 @@ class StorySummarizer {
         
         // Step 2: Fetch comments in batches and limit by valid comments
         $allComments = [];
-        $batches = array_chunk($allCommentIds, 50);
+        $batches = array_chunk($allCommentIds, 25);
         
         foreach ($batches as $batchIndex => $batch) {
             if (count($allComments) >= MAX_COMMENTS_TO_FETCH) {
@@ -541,7 +543,7 @@ class StorySummarizer {
             
             $result = $this->model->generateContent($prompt);
             return $result->text();
-            
+
         } catch (Exception $e) {
             echo "ERROR during summarization: " . $e->getMessage() . "\n";
             return null;
@@ -552,6 +554,16 @@ class StorySummarizer {
         $storySummaryFile = $this->outputDir . "/{$story['id']}-" . STORY_SUMMARY_FILE;
         if (file_exists($storySummaryFile)) {
             return;
+        }
+
+        // Monitor memory usage
+        $memoryUsage = memory_get_usage(true) / 1024 / 1024; // MB
+        echo "  Memory usage: " . number_format($memoryUsage, 1) . " MB\n";
+        
+        // Check if memory usage is getting too high (>100MB)
+        if ($memoryUsage > 100) {
+            echo "  WARNING: High memory usage detected, running garbage collection\n";
+            gc_collect_cycles();
         }
 
         logMessage("Processing content for story {$story['id']}");
@@ -606,6 +618,10 @@ class StorySummarizer {
                 }
             }
         }
+        
+        // Clean up memory
+        unset($storyContent);
+        gc_collect_cycles();
     }
 
     public function processComments($story, $downloadOnly = false, $storyType = null) {
@@ -683,6 +699,10 @@ class StorySummarizer {
                 }
             }
         }
+        
+        // Clean up memory
+        unset($commentsContent);
+        gc_collect_cycles();
     }
     
     /**
@@ -710,6 +730,13 @@ class StorySummarizer {
             
             $storyCnt = 0;
             while ($story = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                // Check memory usage before processing
+                $memoryUsage = memory_get_usage(true) / 1024 / 1024; // MB
+                if ($memoryUsage > 120) {
+                    logMessage("Memory usage too high ({$memoryUsage}MB), stopping processing");
+                    break;
+                }
+                
                 $this->processStory($story, $downloadOnly, $storyType);
                 $this->processComments($story, $downloadOnly, $storyType);
                 
@@ -718,8 +745,8 @@ class StorySummarizer {
                     break;
                 }
 
-                // Sleep to be nice to APIs and servers
-                sleep(1);
+                // Sleep to be nice to APIs and servers and allow system to recover
+                sleep(2);
             }
             
             logMessage("Completed processing of {$storyCnt} stories.");
