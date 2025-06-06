@@ -180,7 +180,7 @@ class StorySummarizer {
             $mainContent = $this->decodeHtmlEntities($mainContent);
             
             if (!$mainContent) {
-                echo " .. could not find any story content\n";
+                echo " .. Could not find the story content in story HTML\n";
             }
             
             return $mainContent;
@@ -560,7 +560,7 @@ class StorySummarizer {
         $storyContent = "";
         $storyFile = $this->originalsDir . "/{$story['id']}-story.txt";
         if (!file_exists($storyFile) && $story['url']) {
-            echo "Fetching story...\n";
+            echo "Fetching story ...\n";
             $storyContent = $this->fetchStoryContent($story['url']);
             
             if (strlen($storyContent) > MIN_STORY_LENGTH_FOR_SUMMARY) {
@@ -639,11 +639,11 @@ class StorySummarizer {
         $commentsFile = $this->originalsDir . "/{$story['id']}-comments.txt";
         if (!file_exists($commentsFile) && $story['comments_url']) {
                     if ($story['comments_count'] > 10) {
-            echo "Fetching comments (will fetch up to " . MAX_COMMENTS_TO_FETCH . " valid comments)...\n";
+            echo "Downloading comments ...\n";
             $commentsContent = $this->fetchComments($story['comments_url']);
             if ($commentsContent) {
                 file_put_contents($commentsFile, $commentsContent);
-                echo "Comments saved...\n";
+                echo "Comments saved ...\n";
             } else {
                 echo "Failed to fetch comments\n";
                 return;
