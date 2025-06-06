@@ -628,7 +628,7 @@ class StorySummarizer {
     }
 
     public function processComments($story, $storyTypes, $downloadOnly = false) {
-        if (str_contains( $storyTypes, STORY_TYPES["new"])) {
+        if ($storyTypes == STORY_TYPES["new"]) {
             logMessage("  Skipping comments processing for new story: {$story['id']}");
             return;
         }
