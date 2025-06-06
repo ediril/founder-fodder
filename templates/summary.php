@@ -57,37 +57,32 @@ error_reporting(E_ALL & ~E_DEPRECATED);
                     </div>
                 </div>
                 <?php endif; ?>
-                
-                <?php if ($has_comments_summary): ?>
+
                 <div class="box summary-card">
                     <h2 class="is-4 has-text-weight-bold">
-                        <span class="icon has-text-primary"><i class="fa-regular fa-comments"></i></span>
-                        Comments Summary
-                    </h2>
-                    <div class="summary-last-updated">                        
-                        <p class="has-text-grey-light">Last updated: <?php echo htmlspecialchars($comments_summary_last_updated); ?></p>
-                    </div>
-                    <div class="summary-content markdown-body">
-                        <?php 
-                        // Convert Markdown to HTML using Parsedown
-                        echo $parsedown->text($comments_summary);
-                        ?>
-                    </div>
-                </div>
-                <?php else: ?>
-                <div class="box summary-card">
-                    <h2 class="is-4 has-text-weight-bold mb-2">
                         <span class="icon has-text-primary"><i class="fa-regular fa-comments"></i></span>
                         Comments Summary
                         <a class="is-size-5" href="<?php echo htmlspecialchars($story['comments_url']); ?>">
                             <i class="fa-solid fa-external-link pl-2"></i> Comments
                         </a>
                     </h2>
-                    <div class="summary-content markdown-body">
-                        Comments summary is not available.
+                    <?php if ($has_comments_summary): ?>
+                        <div class="summary-last-updated">                        
+                            <p class="has-text-grey-light">Last updated: <?php echo htmlspecialchars($comments_summary_last_updated); ?></p>
+                        </div>
+                        <div class="summary-content markdown-body">
+                            <?php 
+                            // Convert Markdown to HTML using Parsedown
+                            echo $parsedown->text($comments_summary);
+                            ?>
+                        </div>
                     </div>
+                    <?php else: ?>
+                        <div class="summary-content markdown-body">
+                            Comments summary is not available.
+                        </div>
+                    <?php endif; ?>
                 </div>
-                <?php endif; ?>
             </div>
         </div>
     </section>
