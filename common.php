@@ -10,6 +10,7 @@ const STORY_TYPES = [
 
 const MAX_COMMENTS_TO_FETCH = 2500;
 const MAX_FETCH = 150;
+const MAX_SUMMARIZE = 10;
 
 const FETCHER_LOCK_FILE_NAME = 'ff_fetch.lock';
 const SUMMARIZER_LOCK_FILE_NAME = 'ff_summarize.lock';
@@ -18,13 +19,15 @@ function acquireLock(string $lockName) {
     $lockFile = __DIR__ . '/' . $lockName;       
     $lockHandle = fopen($lockFile, 'c');
     if (!$lockHandle) {
-        throw new Exception("Cannot create lock file: {$lockFile}");
+        logMessage("Cannot create lock file: {$lockFile}");
+        exit(1);
     }
 
     // Try to get an exclusive lock
     if (!flock($lockHandle, LOCK_EX | LOCK_NB)) {
         fclose($lockHandle);
-        throw new Exception("Another instance of FETCH is already running");
+        logMessage("Another instance of FETCH is already running");
+        exit(1);
     }
 
     logMessage("Acquired process lock (PID: " . getmypid() . ")");
