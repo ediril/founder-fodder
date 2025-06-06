@@ -787,7 +787,7 @@ if (isset($options['help']) || isset($options['h'])) {
 }
 
 $storyType = $options['type'] ?? 'all';
-$limit = isset($options['limit']) ? (int)$options['limit'] : 10;
+$limit = isset($options['limit']) ? (int)$options['limit'] : MAX_SUMMARIZE;
 $dbPath = $options['db'] ?? DB_PATH;
 $outputDir = $options['output'] ?? OUTPUT_DIR;
 $downloadOnly = isset($options['download-only']);
