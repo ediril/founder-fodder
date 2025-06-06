@@ -284,7 +284,7 @@ class HackerNewsFetcher
         return $parsedUrl['host'] ?? "";
     }
 
-    private function storeStory(array $story, string $storyType, int $ranking): void
+    private function storeStory(array $story, int $storyTypeId, int $ranking): void
     {
         if (empty($story)) {
             return;
@@ -301,12 +301,6 @@ class HackerNewsFetcher
         $user = $story['by'] ?? '';
         $timestamp = $story['time'] ?? 0;
         $fetchedAt = time();
-        $typeId = STORY_TYPES[$storyType] ?? 0;
-
-        // Check if story already exists in the database
-        $stmt = $this->pdo->prepare('SELECT id FROM stories WHERE id = ?');
-        $stmt->execute([$storyId]);
-        $existing = $stmt->fetch();
 
         // Check if image already exists for this story
         $imageExists = false;
@@ -331,6 +325,11 @@ class HackerNewsFetcher
             $this->saveStoryImage($storyId, null);
         }
 
+        // Check if story already exists in the database
+        // TODO: We can do the fetch and store in one go
+        $stmt = $this->pdo->prepare('SELECT id FROM stories WHERE id = ?');
+        $stmt->execute([$storyId]);
+        $existing = $stmt->fetch();
         if ($existing) {
             // Update existing story
             $stmt = $this->pdo->prepare('
@@ -359,28 +358,26 @@ class HackerNewsFetcher
         }
 
         // Handle ranking data separately
-        if ($typeId > 0 && $ranking >= 0) {
-            // Check if rank entry already exists
-            $stmt = $this->pdo->prepare('SELECT id FROM ranks WHERE id = ? AND type = ?');
-            $stmt->execute([$storyId, $typeId]);
-            $existingRank = $stmt->fetch();
+        // Check if rank entry already exists
+        $stmt = $this->pdo->prepare('SELECT id FROM ranks WHERE id = ? AND type = ?');
+        $stmt->execute([$storyId, $storyTypeId]);
+        $existingRank = $stmt->fetch();
 
-            if ($existingRank) {
-                // Update existing rank
-                $stmt = $this->pdo->prepare('
-                    UPDATE ranks
-                    SET rank = ?
-                    WHERE id = ? AND type = ?
-                ');
-                $stmt->execute([$ranking, $storyId, $typeId]);
-            } else {
-                // Insert new rank
-                $stmt = $this->pdo->prepare('
-                    INSERT INTO ranks (id, type, rank)
-                    VALUES (?, ?, ?)
-                ');
-                $stmt->execute([$storyId, $typeId, $ranking]);
-            }
+        if ($existingRank) {
+            // Update existing rank
+            $stmt = $this->pdo->prepare('
+                UPDATE ranks
+                SET rank = ?
+                WHERE id = ? AND type = ?
+            ');
+            $stmt->execute([$ranking, $storyId, $storyTypeId]);
+        } else {
+            // Insert new rank
+            $stmt = $this->pdo->prepare('
+                INSERT INTO ranks (id, type, rank)
+                VALUES (?, ?, ?)
+            ');
+            $stmt->execute([$storyId, $storyTypeId, $ranking]);
         }
     }
 
@@ -422,7 +419,7 @@ class HackerNewsFetcher
                     $this->storeStory($story, $storyType, $ranking);
                     $count++;
 
-                                    // Print progress every 10 stories
+                // Print progress every 10 stories
                 if ($count % 10 === 0) {
                     logMessage("Processed {$count}/" . count($storyIds) . " {$storyType} stories");
                 }
@@ -475,7 +472,7 @@ class HackerNewsFetcher
             
             // For single story fetch, we don't have ranking context, so use 0
             // and don't shift existing rankings
-            $this->storeStory($story, 'byid', 0);
+            $this->storeStory($story, STORY_TYPES["new"], 0);
             
             $this->pdo->commit();
             echo "Successfully fetched and stored story {$storyId}\n";
