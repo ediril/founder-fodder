@@ -53,7 +53,7 @@ class StorySummarizer {
         setup_signal_handlers();
         register_shutdown_function([$this, 'releaseResources']);
 
-        check_if_other_process_running(FETCHER_LOCK_FILE_NAME);
+        exit_if_other_process_running(FETCHER_LOCK_FILE_NAME);
 
         // write PID to lock file
         ftruncate($this->lockHandle, 0);

@@ -115,7 +115,7 @@ function close_db_connection(?PDO $conn): void {
     }
 }
 
-function check_if_other_process_running(string $lockName, int $timeout = 60 * 2): void {
+function exit_if_other_process_running(string $lockName, int $timeout = 60 * 2): void {
     if (file_exists(__DIR__ . '/' . $lockName)) {
         logMessage("{$lockName} is still running");
         exit(1);
