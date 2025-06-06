@@ -1,19 +1,13 @@
 <?php
 
+
 // Security: Only allow execution from command line
 if (php_sapi_name() !== 'cli') {
     http_response_code(404);
     die('404 Not Found');
 }
 
-require_once __DIR__ . '/defines.php';
-
-/**
- * Log message with timestamp
- */
-function logMessage(string $message): void {
-    echo '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
-}
+require_once __DIR__ . '/common.php';
 
 class HackerNewsFetcher
 {
@@ -25,34 +19,25 @@ class HackerNewsFetcher
     ];
     private const ITEM_URL = self::BASE_URL . "/item";
 
-    private string $dbPath;
     private string $imgDir;
-    private string $lockFile;
     private $lockHandle;
     private ?\PDO $pdo = null;
 
-    public function __construct(string $dbPath = FF_CONSTS\DB_PATH, string $imgDir = "static/img/stories")
+    public function __construct(string $dbPath = DB_PATH, string $imgDir = "static/img/stories")
     {
-        $this->dbPath = $dbPath;
         $this->imgDir = $imgDir;
-        $this->lockFile = sys_get_temp_dir() . '/hackernews_fetcher.lock';
-        
-        // Check if another instance is running
-        if (!$this->acquireLock()) {
-            logMessage("Another instance of the fetcher is already running. Exiting.");
-            exit(1);
-        }
-        
+        $this->lockHandle = acquireLock(FETCHER_LOCK_FILE_NAME);
+
         // Set up signal handlers for cleanup
         if (function_exists('pcntl_signal')) {
-            pcntl_signal(SIGTERM, [$this, 'handleSignal']);
-            pcntl_signal(SIGINT, [$this, 'handleSignal']);
+            pcntl_signal(SIGTERM, 'handleSignal');
+            pcntl_signal(SIGINT, 'handleSignal');
         }
         
         // Set up shutdown function for cleanup
-        register_shutdown_function([$this, 'cleanup']);
+        register_shutdown_function([$this, 'releaseResources']);
         
-        $this->initDb();
+        $this->pdo = get_db_connection($dbPath);
         
         // Ensure image directory exists
         if (!is_dir($this->imgDir)) {
@@ -60,68 +45,15 @@ class HackerNewsFetcher
         }
     }
 
-    public function __destruct()
-    {
-        $this->cleanup();
-    }
-
-    private function acquireLock(): bool
-    {
-        $this->lockHandle = fopen($this->lockFile, 'w');
-        if (!$this->lockHandle) {
-            return false;
-        }
-        
-        // Try to get an exclusive lock
-        if (!flock($this->lockHandle, LOCK_EX | LOCK_NB)) {
-            fclose($this->lockHandle);
-            $this->lockHandle = null;
-            return false;
-        }
-        
-        // Write PID to lock file
-        fwrite($this->lockHandle, getmypid());
-        fflush($this->lockHandle);
-        
-        return true;
-    }
-
-    public function cleanup(): void
+    public function releaseResources(): void
     {
         // Close database connection explicitly
         if (isset($this->pdo)) {
             $this->pdo = null;
         }
-        
-        if ($this->lockHandle) {
-            flock($this->lockHandle, LOCK_UN);
-            fclose($this->lockHandle);
-            $this->lockHandle = null;
-        }
-        
-        if (file_exists($this->lockFile)) {
-            @unlink($this->lockFile);
-        }
-    }
 
-    public function handleSignal(int $signal): void
-    {
-        logMessage("Received signal {$signal}. Cleaning up and exiting...");
-        $this->cleanup();
-        exit(0);
-    }
-
-    private function initDb(): void
-    {
-        $this->pdo = new \PDO("sqlite:{$this->dbPath}");
-        $this->pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-        
-        // Configure SQLite for better reliability and performance
-        $this->pdo->exec('PRAGMA journal_mode = WAL');
-        $this->pdo->exec('PRAGMA synchronous = NORMAL');
-        $this->pdo->exec('PRAGMA temp_store = MEMORY');
-        $this->pdo->exec('PRAGMA mmap_size = 268435456'); // 256MB
-        $this->pdo->exec('PRAGMA foreign_keys = ON');
+        // release process lock
+        releaseLock($this->lockHandle, FETCHER_LOCK_FILE_NAME);
     }
 
     private function fetchUrl(string $url, int $timeout = 30, bool $headersOnly = false): string|array|false
@@ -377,7 +309,7 @@ class HackerNewsFetcher
         $user = $story['by'] ?? '';
         $timestamp = $story['time'] ?? 0;
         $fetchedAt = time();
-        $typeId = FF_CONSTS\STORY_TYPES[$storyType] ?? 0;
+        $typeId = STORY_TYPES[$storyType] ?? 0;
 
         // Check if story already exists in the database
         $stmt = $this->pdo->prepare('SELECT id FROM stories WHERE id = ?');
@@ -478,7 +410,7 @@ class HackerNewsFetcher
             $this->pdo->beginTransaction();
             
             // Get the type ID for this story type
-            $typeId = FF_CONSTS\STORY_TYPES[$storyType] ?? 0;
+            $typeId = STORY_TYPES[$storyType] ?? 0;
             if ($typeId > 0) {
                 // Shift down the rankings of existing stories that aren't being refetched
                 $placeholders = str_repeat('?,', count($storyIds) - 1) . '?';
@@ -698,8 +630,8 @@ if (php_sapi_name() === 'cli') {
     }
     
     $type = $options['type'] ?? 'all';
-    $limit = (int)($options['limit'] ?? FF_CONSTS\FETCH_LIMIT);
-    $db = $options['db'] ?? FF_CONSTS\DB_PATH;
+    $limit = (int)($options['limit'] ?? FETCH_LIMIT);
+    $db = $options['db'] ?? DB_PATH;
     $storyId = isset($options['story-id']) ? (int)$options['story-id'] : null;
     
     $validTypes = ['top', 'new', 'best', 'all'];

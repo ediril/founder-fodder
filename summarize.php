@@ -6,15 +6,8 @@ if (php_sapi_name() !== 'cli') {
     die('404 Not Found');
 }
 
-require_once __DIR__ . '/defines.php';
+require_once __DIR__ . '/common.php';
 require_once __DIR__ . '/vendor/autoload.php';
-
-/**
- * Log message with timestamp
- */
-function logMessage(string $message): void {
-    echo '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
-}
 
 use Dotenv\Dotenv;
 $dotenv = Dotenv::createImmutable(__DIR__ . '/../../_env', '.founderfodder.env');
@@ -44,33 +37,32 @@ const HN_BASE_URL = "https://hacker-news.firebaseio.com/v0";
 const HN_ITEM_URL = HN_BASE_URL . "/item";
 
 class StorySummarizer {
-    private $dbPath;
     private $outputDir;
     private $originalsDir;
     private $client;
     private $model;
-    private $lockFile;
     private $lockHandle;
     private $dryRun;
     private ?\PDO $pdo = null;
     
-    public function __construct($dbPath = FF_CONSTS\DB_PATH, $outputDir = OUTPUT_DIR, $originalsDir = ORIGINALS_DIR, $dryRun = false) {
-        // Initialize file locking first
-        $this->initializeLock();
-        
+    public function __construct($dbPath = DB_PATH, $outputDir = OUTPUT_DIR, $originalsDir = ORIGINALS_DIR, $dryRun = false) {
+        $this->lockHandle = acquireLock(SUMMARIZER_LOCK_FILE_NAME);
+
         // Set up signal handlers for cleanup
         if (function_exists('pcntl_signal')) {
-            pcntl_signal(SIGTERM, [$this, 'handleSignal']);
-            pcntl_signal(SIGINT, [$this, 'handleSignal']);
+            pcntl_signal(SIGTERM, 'handleSignal');
+            pcntl_signal(SIGINT, 'handleSignal');
         }
         
-        $this->dbPath = $dbPath;
+        // Set up shutdown function for cleanup
+        register_shutdown_function([$this, 'releaseResources']);
+
         $this->outputDir = $outputDir;
         $this->originalsDir = $originalsDir;
         $this->dryRun = $dryRun;
         
         // Initialize database connection
-        $this->initDb();
+        $this->pdo = get_db_connection($dbPath);
         
         if ($dryRun) {
             echo "DRY-RUN MODE: Will not send content to Gemini API\n";
@@ -96,90 +88,12 @@ class StorySummarizer {
         }
     }
     
-    /**
-     * Initialize database connection with optimizations
-     */
-    private function initDb(): void
+    public function releaseResources(): void
     {
-        $this->pdo = new \PDO("sqlite:{$this->dbPath}");
-        $this->pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-        
-        // Configure SQLite for better reliability and performance
-        $this->pdo->exec('PRAGMA journal_mode = WAL');
-        $this->pdo->exec('PRAGMA synchronous = NORMAL');
-        $this->pdo->exec('PRAGMA temp_store = MEMORY');
-        $this->pdo->exec('PRAGMA mmap_size = 268435456'); // 256MB
+        releaseLock($this->lockHandle, SUMMARIZER_LOCK_FILE_NAME);
+        $this->lockHandle = null;
     }
-    
-    /**
-     * Initialize file locking to prevent multiple instances
-     */
-    private function initializeLock() {
-        $this->lockFile = sys_get_temp_dir() . '/story_summarizer.lock';
-        
-        // Try to open the lock file
-        $this->lockHandle = fopen($this->lockFile, 'c');
-        if (!$this->lockHandle) {
-            throw new Exception("Cannot create lock file: {$this->lockFile}");
-        }
-        
-        // Try to acquire an exclusive lock
-        if (!flock($this->lockHandle, LOCK_EX | LOCK_NB)) {
-            fclose($this->lockHandle);
-            throw new Exception("Another instance of the story summarizer is already running. Lock file: {$this->lockFile}");
-        }
-        
-        // Write current process ID to the lock file
-        ftruncate($this->lockHandle, 0);
-        fwrite($this->lockHandle, getmypid() . "\n" . date('Y-m-d H:i:s') . "\n");
-        fflush($this->lockHandle);
-        
-        // Register shutdown function to clean up lock
-        register_shutdown_function([$this, 'releaseLock']);
-        
-        logMessage("Acquired process lock (PID: " . getmypid() . ")");
-    }
-    
-    /**
-     * Release the file lock and close database connection
-     */
-    public function releaseLock() {
-        // Close database connection explicitly
-        if (isset($this->pdo)) {
-            $this->pdo = null;
-        }
-        
-        if ($this->lockHandle) {
-            flock($this->lockHandle, LOCK_UN);
-            fclose($this->lockHandle);
-            $this->lockHandle = null;
-            
-            // Remove the lock file
-            if (file_exists($this->lockFile)) {
-                unlink($this->lockFile);
-            }
-            
-            logMessage("Released process lock");
-        }
-    }
-    
-    /**
-     * Handle signals for graceful shutdown
-     */
-    public function handleSignal(int $signal): void
-    {
-        logMessage("Received signal {$signal}. Cleaning up and exiting...");
-        $this->releaseLock();
-        exit(0);
-    }
-    
-    /**
-     * Destructor to ensure lock is released
-     */
-    public function __destruct() {
-        $this->releaseLock();
-    }
-    
+
     /**
      * Decode HTML entities in text to their corresponding characters
      */
@@ -382,21 +296,21 @@ class StorySummarizer {
         $allIds = [];
         $queue = $commentIds; // Start with top-level comment IDs
         
-        echo "  Collecting comment IDs breadth-first (max: " . FF_CONSTS\MAX_COMMENTS_TO_FETCH . ")...\n";
+        echo "  Collecting comment IDs breadth-first (max: " . MAX_COMMENTS_TO_FETCH . ")...\n";
         
         // Keep collecting until queue is empty or we have enough IDs
-        while (!empty($queue) && count($allIds) < FF_CONSTS\MAX_COMMENTS_TO_FETCH) {
+        while (!empty($queue) && count($allIds) < MAX_COMMENTS_TO_FETCH) {
             // Handle signals (CTRL+C, etc.)
             if (function_exists('pcntl_signal_dispatch')) {
                 pcntl_signal_dispatch();
             }
             
-            $remaining = FF_CONSTS\MAX_COMMENTS_TO_FETCH - count($allIds);
+            $remaining = MAX_COMMENTS_TO_FETCH - count($allIds);
             $currentBatch = array_splice($queue, 0, min(50, $remaining)); // Process in batches of 50
             $allIds = array_merge($allIds, $currentBatch);
             
             // Fetch this batch to get reply IDs (only if we still need more)
-            if (count($allIds) < FF_CONSTS\MAX_COMMENTS_TO_FETCH) {
+            if (count($allIds) < MAX_COMMENTS_TO_FETCH) {
                 $batchComments = $this->fetchCommentsBatch($currentBatch);
                 
                 // Add reply IDs to the queue for further processing
@@ -411,8 +325,8 @@ class StorySummarizer {
             echo "    Collected " . count($allIds) . " comment IDs so far...\n";
         }
         
-        if (count($allIds) >= FF_CONSTS\MAX_COMMENTS_TO_FETCH) {
-            echo "  Reached collection limit of " . FF_CONSTS\MAX_COMMENTS_TO_FETCH . " comment IDs\n";
+        if (count($allIds) >= MAX_COMMENTS_TO_FETCH) {
+            echo "  Reached collection limit of " . MAX_COMMENTS_TO_FETCH . " comment IDs\n";
         }
         
         echo "  Collected " . count($allIds) . " comment IDs total\n";
@@ -494,8 +408,8 @@ class StorySummarizer {
                 pcntl_signal_dispatch();
             }
             
-            if (count($allComments) >= FF_CONSTS\MAX_COMMENTS_TO_FETCH) {
-                echo "  Reached limit of " . FF_CONSTS\MAX_COMMENTS_TO_FETCH . " valid comments\n";
+            if (count($allComments) >= MAX_COMMENTS_TO_FETCH) {
+                echo "  Reached limit of " . MAX_COMMENTS_TO_FETCH . " valid comments\n";
                 break;
             }
             
@@ -503,7 +417,7 @@ class StorySummarizer {
             
             // Only add comments up to the limit
             foreach ($batchComments as $commentId => $comment) {
-                if (count($allComments) < FF_CONSTS\MAX_COMMENTS_TO_FETCH) {
+                if (count($allComments) < MAX_COMMENTS_TO_FETCH) {
                     $allComments[$commentId] = $comment;
                 } else {
                     break;
@@ -512,8 +426,8 @@ class StorySummarizer {
             
             echo "  Fetched " . count($allComments) . " valid comments so far...\n";
             
-            if (count($allComments) >= FF_CONSTS\MAX_COMMENTS_TO_FETCH) {
-                echo "  Reached limit of " . FF_CONSTS\MAX_COMMENTS_TO_FETCH . " valid comments\n";
+            if (count($allComments) >= MAX_COMMENTS_TO_FETCH) {
+                echo "  Reached limit of " . MAX_COMMENTS_TO_FETCH . " valid comments\n";
                 break;
             }
         }
@@ -736,7 +650,7 @@ class StorySummarizer {
         $commentsFile = $this->originalsDir . "/{$story['id']}-comments.txt";
         if (!file_exists($commentsFile) && $story['comments_url']) {
                     if ($story['comments_count'] > 10) {
-            echo "Fetching comments (will fetch up to " . FF_CONSTS\MAX_COMMENTS_TO_FETCH . " valid comments)...\n";
+            echo "Fetching comments (will fetch up to " . MAX_COMMENTS_TO_FETCH . " valid comments)...\n";
             $commentsContent = $this->fetchComments($story['comments_url']);
             if ($commentsContent) {
                 file_put_contents($commentsFile, $commentsContent);
@@ -795,7 +709,7 @@ class StorySummarizer {
         logMessage("Looking for {$storyType} stories to process (limit: {$limit})...");
         
         // Get type ID for the story type
-        $typeId = FF_CONSTS\STORY_TYPES[$storyType] ?? null;
+        $typeId = STORY_TYPES[$storyType] ?? null;
         if (!$typeId) {
             logMessage("Invalid story type: {$storyType}");
             return;
@@ -849,7 +763,7 @@ class StorySummarizer {
             $story = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($story) {
                 // Convert type ID back to string
-                $typeMap = array_flip(FF_CONSTS\STORY_TYPES);
+                $typeMap = array_flip(STORY_TYPES);
                 $storyTypeString = $typeMap[$story['type']] ?? throw new Exception("Unknown type for story-id {$storyId}");
                 
                 $this->processStory($story, $downloadOnly, $storyTypeString);
@@ -880,7 +794,7 @@ if (isset($options['help']) || isset($options['h'])) {
     echo "Options:\n";
     echo "  --type=TYPE        Type of stories to summarize (top, new, best, all) [default: all]\n";
     echo "  --limit=N          Maximum number of stories to process per type [default: 100]\n";
-    echo "  --db=PATH          Path to SQLite database [default: " . FF_CONSTS\DB_PATH . "]\n";
+    echo "  --db=PATH          Path to SQLite database [default: " . DB_PATH . "]\n";
     echo "  --output=PATH      Output directory for content files [default: " . OUTPUT_DIR . "]\n";
     echo "  --download-only    Download story and comments content without summarizing\n";
     echo "  --dry-run          Process and show what would be summarized without calling Gemini API\n";
@@ -891,7 +805,7 @@ if (isset($options['help']) || isset($options['h'])) {
 
 $storyType = $options['type'] ?? 'all';
 $limit = isset($options['limit']) ? (int)$options['limit'] : 10;
-$dbPath = $options['db'] ?? FF_CONSTS\DB_PATH;
+$dbPath = $options['db'] ?? DB_PATH;
 $outputDir = $options['output'] ?? OUTPUT_DIR;
 $downloadOnly = isset($options['download-only']);
 $dryRun = isset($options['dry-run']);
@@ -918,12 +832,16 @@ if (isset($options['story-id'])) {
 try {
     $summarizer = new StorySummarizer($dbPath, $outputDir, ORIGINALS_DIR, $dryRun);
     
+    sleep(20);
+    exit(0);
+
+
     if ($storyId) {
         $summarizer->processStoryById($storyId, $downloadOnly);
     } else {
         if ($storyType === 'all') {
             // Process all story types with the limit applying to each type
-            $types = array_keys(FF_CONSTS\STORY_TYPES);
+            $types = array_keys(STORY_TYPES);
             
             foreach ($types as $type) {
                 logMessage("=== Processing {$type} stories ===");

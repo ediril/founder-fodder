@@ -4,35 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/banalytiq/banalytiq.php';
 record_visit();
 
-require_once __DIR__ . '/defines.php';
-
-/**
- * Connect to the SQLite database
- */
-function get_db_connection(): PDO {
-    $db_file = FF_CONSTS\DB_PATH;
-    if (!file_exists($db_file)) {
-        throw new Exception("Database file not found: {$db_file}");
-    }
-    
-    try {
-        $conn = new PDO("sqlite:" . $db_file);
-        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-        return $conn;
-    } catch (PDOException $e) {
-        throw new Exception("Database connection failed: " . $e->getMessage());
-    }
-}
-
-/**
- * Close the database connection
- */
-function close_db_connection(?PDO $conn): void {
-    if ($conn !== null) {
-        $conn = null;
-    }
-}
+require_once __DIR__ . '/common.php';
 
 /**
  * Format timestamp as 'time ago'
@@ -57,7 +29,7 @@ function format_time_ago(int $timestamp): string {
 /**
  * Get stories for a specific page with pagination
  */
-function get_page_stories(string $story_type = 'top', int $page = 1, int $per_page = FF_CONSTS\STORIES_PER_PAGE): array {
+function get_page_stories(string $story_type = 'top', int $page = 1, int $per_page = STORIES_PER_PAGE): array {
     try {
         // Calculate offset for pagination
         $offset = ($page - 1) * $per_page;
@@ -65,7 +37,7 @@ function get_page_stories(string $story_type = 'top', int $page = 1, int $per_pa
         debugLog("Getting page stories: type=$story_type, page=$page, per_page=$per_page, offset=$offset");
         
         // Get type ID for the story type
-        $type_id = FF_CONSTS\STORY_TYPES[$story_type] ?? null;
+        $type_id = STORY_TYPES[$story_type] ?? null;
         if (!$type_id) {
             debugLog("Invalid story type: $story_type");
             throw new Exception("Invalid story type: $story_type");
@@ -200,30 +172,6 @@ function batch_check_summary_files(array $story_ids): array {
     return $results;
 }
 
-/**
- * Check if summary files exist for a story
- */
-function check_summary_files(string $story_id): array {
-    $story_summary_path = "static/content/{$story_id}-story-summary.md";
-    $comments_summary_path = "static/content/{$story_id}-comments-summary.md";
-    
-    $has_story_summary = file_exists($story_summary_path);
-    $has_comments_summary = file_exists($comments_summary_path);
-    
-    return [
-        'has_story_summary' => $has_story_summary,
-        'has_comments_summary' => $has_comments_summary
-    ];
-}
-
-// Debug function to log requests - remove in production
-function debugLog($message) {
-    $logEnabled = false; // Set to true when debugging
-    if ($logEnabled) {
-        file_put_contents('debug.log', date('[Y-m-d H:i:s] ') . $message . PHP_EOL, FILE_APPEND);
-    }
-}
-
 // Get the base path of the application (important for subdirectory installations)
 function getBasePath() {
     $scriptName = dirname($_SERVER['SCRIPT_NAME']);
@@ -260,13 +208,13 @@ if ($path === '/' || $path === '/index.php') {
     // Get stories for the main page
     $story_type = $_GET['type'] ?? 'top';
     $page = max(1, (int)($_GET['page'] ?? 1));
-    $per_page = FF_CONSTS\STORIES_PER_PAGE; // Use the constant
+    $per_page = STORIES_PER_PAGE; // Use the constant
     
     // Get stories for current page
     $stories = get_page_stories($story_type, $page, $per_page);
     
-    $db = new SQLite3(FF_CONSTS\DB_PATH);
-    $type_id = FF_CONSTS\STORY_TYPES[$story_type] ?? null;
+    $db = new SQLite3(DB_PATH);
+    $type_id = STORY_TYPES[$story_type] ?? null;
     if ($type_id) {
         $result = $db->querySingle("
             SELECT MAX(s.fetched_at) as max_ts 
@@ -286,7 +234,7 @@ if ($path === '/' || $path === '/index.php') {
     $story_id = $matches[1];
     
     // Get story details from database
-    $db = new SQLite3(FF_CONSTS\DB_PATH);
+    $db = new SQLite3(DB_PATH);
     $story = $db->querySingle("SELECT * FROM stories WHERE id = " . intval($story_id), true);
     $story['time_ago'] = format_time_ago((int)$story['timestamp']);
 
