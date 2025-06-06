@@ -614,7 +614,7 @@ class StorySummarizer {
         gc_collect_cycles();
     }
 
-    public function processComments($story, $downloadOnly = false, $storyTypes) {
+    public function processComments($story, $storyTypes, $downloadOnly = false) {
         if (str_contains( $storyTypes, STORY_TYPES["new"])) {
             logMessage("  Skipping comments processing for new story: {$story['id']}");
             return;
@@ -730,7 +730,7 @@ class StorySummarizer {
                 }
                 
                 $this->processStory($story, $downloadOnly);
-                $this->processComments($story, $downloadOnly, STORY_TYPES[$storyType]);
+                $this->processComments($story, STORY_TYPES[$storyType], $downloadOnly);
                 
                 $storyCnt++;
                 if ($limit > 0 && $storyCnt == $limit) {
@@ -766,7 +766,7 @@ class StorySummarizer {
             $story = $stmt->fetch(PDO::FETCH_ASSOC);
             if ($story) {                
                 $this->processStory($story, $downloadOnly);
-                $this->processComments($story, $downloadOnly, $story['types']);
+                $this->processComments($story, $story['types'], $downloadOnly);
             } else {
                 logMessage("Story ID {$storyId} not found in database.");
             }
