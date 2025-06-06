@@ -488,8 +488,7 @@ class HackerNewsFetcher
     /**
      * Remove images from static/img/stories that don't exist in the database.
      */
-    function cleanupUnusedImages(): void
-    {
+    public function cleanupUnusedImages(): void {
         echo "\nCleaning up unused images...\n";
         
         try {
