@@ -1,4 +1,8 @@
 
+- Check if comments are getting updated every 6 hours within 24 hours
+
+- Fetcher: We can do the fetch and store in one go
+
 - Summarizer: Delete stories, comments and summaries if they were fetched over 1 month ago
 
 - Use HEAD to fetch an image for the url
