@@ -1,12 +1,12 @@
 <?php
 
 const MAX_COMMENTS_TO_FETCH = 2500;
-const MAX_FETCH = 250;                  // 25 pages fetched
-const MAX_SUMMARIZE = 50;               // 5 pages summarized
+const MAX_FETCH = 200;                  // 20 pages worth
+const MAX_SUMMARIZE = 30;               // 3 pages worth
 const MIN_STORY_LENGTH_FOR_SUMMARY = 250;
 
 const FETCHER_VERSION = "0.0606.003";
-const SUMMARIZER_VERSION = "0.0606.005";
+const SUMMARIZER_VERSION = "0.0606.006";
 
 const FETCHER_LOCK_FILE_NAME = 'ff_fetch.lock';
 const SUMMARIZER_LOCK_FILE_NAME = 'ff_summarize.lock';

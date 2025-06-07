@@ -736,8 +736,8 @@ class StorySummarizer {
                 // Monitor memory usage
                 $memoryUsage = memory_get_usage(true) / 1024 / 1024; // MB
                 
-                // Check if memory usage is getting too high (>100MB)
-                if ($memoryUsage > 100) {
+                // Check if memory usage is getting too high
+                if ($memoryUsage > 60) {
                     echo "  WARNING: High memory usage: " . number_format($memoryUsage, 1) . " MB, running garbage collection\n";
                     gc_collect_cycles();
                 }
