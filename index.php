@@ -274,6 +274,18 @@ if ($path === '/' || $path === '/index.php') {
     // Include the summary template
     include 'templates/summary.php';
 
+} elseif ($path === '/about') {
+    // Handle about page
+    include 'templates/about.php';
+
+} elseif ($path === '/legal') {
+    // Handle terms of service page
+    include 'templates/legal.php';
+
+} elseif ($path === '/privacy') {
+    // Handle privacy policy page
+    include 'templates/privacy.php';
+
 } elseif (strpos($path, '/static/') === 0) {
     // Serve static files
     $file = ltrim($path, '/');
