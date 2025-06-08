@@ -4,19 +4,11 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 // Suppress deprecation warnings
 error_reporting(E_ALL & ~E_DEPRECATED);
+
+$page_title = 'Summary - ' . $story['title'];
+$additional_css = ['https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown.css'];
+include __DIR__ . '/partials/head.php'; 
 ?>
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Summary - <?php echo htmlspecialchars($story['title']); ?></title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="<?php echo asset_url('/static/css/site.css'); ?>">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown.css">
-</head>
-<body>
     <section class="hero is-small summary-hero">
         <div class="hero-body">
             <div class="container">
@@ -87,11 +79,4 @@ error_reporting(E_ALL & ~E_DEPRECATED);
         </div>
     </section>
     
-    <footer class="footer">
-        <div class="content has-text-centered">
-            <p><a href="https://emrahdiril.com">Emrah Diril</a> &copy; 2025</p>
-            <p>100% coded with ✨ & ❤️</p>
-        </div>
-    </footer>
-</body>
-</html> 
+<?php include __DIR__ . '/partials/footer.php'; ?> 

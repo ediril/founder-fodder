@@ -1,14 +1,7 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Founder Fodder</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="<?php echo asset_url('/static/css/site.css'); ?>">
-</head>
-<body>
+<?php 
+$page_title = 'Founder Fodder';
+include __DIR__ . '/partials/head.php'; 
+?>
     <section class="hero is-small">
         <div class="hero-body">
             <div class="container has-text-centered">
@@ -113,11 +106,4 @@
         </div>
     </section>
     
-    <footer class="footer">
-        <div class="content has-text-centered">
-            <p style="margin: 0; padding: 0;"><a href="https://emrahdiril.com">Emrah Diril</a> &copy; 2025</p>
-            <p style="margin: 0; padding: 0;">Created with ✨ & ❤️</p>
-        </div>
-    </footer>
-</body>
-</html>
+<?php include __DIR__ . '/partials/footer.php'; ?>

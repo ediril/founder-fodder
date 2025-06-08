@@ -6,13 +6,13 @@ $ php -S localhost:8000
 # How to fetch new content from HN
 The following fetches story urls and metadata:
 ```
-$ php fetch.php --type=top --limit=50
+$ php fetcher.php [--type=top --limit=50]
 ```
 
 # How to summarize story and comments
 The following will first download and store the text for the story and its comments, then send them to AI to be summarized
 ```
-$ php summarize.php --type=top --limit=50
+$ php summarizer.php [--type=top --limit=50]
 ```
 
 ## To debug:
@@ -42,3 +42,8 @@ git submodule update --remote
 - Commit the change to the submodule
 - `git push origin HEAD:main`
 - Stage the submodule to update its reference in the parent project
+
+# How to add a new page
+- Start with `<?php $page_title = 'New Page'; include __DIR__ . '/partials/head.php'; ?>`
+- Add your content
+- End with `<?php include __DIR__ . '/partials/footer.php'; ?>`
