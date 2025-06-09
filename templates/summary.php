@@ -12,7 +12,7 @@ include __DIR__ . '/partials/head.php';
     <section class="hero is-small summary-hero">
         <div class="hero-body">
             <div class="container">
-                <a href="javascript:history.back()" class="back-button">
+                <a href="javascript:history.back()" class="back-button mb-2">
                     <span class="icon"><i class="fa-solid fa-arrow-left"></i></span>
                     <span>Back</span>
                 </a>
@@ -29,7 +29,7 @@ include __DIR__ . '/partials/head.php';
         </div>
     </section>
     
-    <section class="section summary-section">
+    <section class="section summary-section py-6">
         <div class="container">
             <div class="content">
                 <?php 
@@ -38,7 +38,7 @@ include __DIR__ . '/partials/head.php';
                 ?>
                 
                 <?php if ($has_story_summary): ?>
-                <div class="box summary-card">
+                <div class="box summary-card mb-6">
                     <h2 class="is-4 has-text-weight-bold mb-2">
                         <span class="icon has-text-primary"><i class="fa-regular fa-file-lines"></i></span>
                         Story Summary
@@ -46,10 +46,10 @@ include __DIR__ . '/partials/head.php';
                             <i class="fa-solid fa-external-link pl-2"></i> Story
                         </a>
                     </h2>
-                    <div class="summary-last-updated">                        
+                    <div class="summary-last-updated pl-1 py-3">                        
                         <p class="has-text-grey-light">Last updated: <?php echo htmlspecialchars($story_summary_last_updated); ?></p>
                     </div>
-                    <div class="summary-content markdown-body">
+                    <div class="summary-content markdown-body px-1 pb-6">
                         <?php 
                         // Convert Markdown to HTML using Parsedown
                         echo $parsedown->text($story_summary);
@@ -67,10 +67,10 @@ include __DIR__ . '/partials/head.php';
                         </a>
                     </h2>
                     <?php if ($has_comments_summary): ?>
-                        <div class="summary-last-updated">                        
+                        <div class="summary-last-updated pl-1 py-3">                        
                             <p class="has-text-grey-light">Last updated: <?php echo htmlspecialchars($comments_summary_last_updated); ?></p>
                         </div>
-                        <div class="summary-content markdown-body">
+                        <div class="summary-content markdown-body px-1 pb-6">
                             <?php 
                             // Convert Markdown to HTML using Parsedown
                             echo $parsedown->text($comments_summary);
@@ -78,7 +78,7 @@ include __DIR__ . '/partials/head.php';
                         </div>
                     </div>
                     <?php else: ?>
-                        <div class="summary-content markdown-body">
+                        <div class="summary-content markdown-body px-1 pb-6">
                             Comments summary is not available.
                         </div>
                     <?php endif; ?>

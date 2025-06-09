@@ -6,7 +6,7 @@ include __DIR__ . '/partials/head.php';
         <div class="hero-body">
             <div class="container has-text-centered">
                 <h1 class="title is-2">
-                    <i class="fa-solid fa-fire"></i> Founder Fodder
+                    <i class="fa-solid fa-fire mr-2"></i> Founder Fodder
                 </h1>
                 <p class="subtitle">
                     Inspiration for Founders, Makers and Tinkerers
@@ -17,7 +17,7 @@ include __DIR__ . '/partials/head.php';
     
     <section class="section">
         <div class="container">
-            <div class="buttons story-filters">
+            <div class="buttons is-centered story-filters mb-5">
                 <a href="/?type=top" class="button <?php echo ($stories['type'] === 'top') ? 'is-primary' : ''; ?>">
                     <span class="icon"><i class="fa-solid fa-arrow-trend-up"></i></span>
                     <span>Top</span>
@@ -38,7 +38,7 @@ include __DIR__ . '/partials/head.php';
             </div>
             <?php else: ?>
             
-            <div class="last-updated-card">
+            <div class="last-updated-card mb-4">
                 <p class="is-size-7 has-text-grey">
                     Last updated: <?php echo $last_updated ? format_time_ago($last_updated) : 'Never'; ?>
                 </p>
@@ -59,27 +59,27 @@ include __DIR__ . '/partials/head.php';
                         <?php endif; ?>
                     </div>
                     <div class="story-content">
-                        <p class="title is-5">
+                        <p class="title is-5 mb-3">
                             <a href="<?php echo htmlspecialchars($story['url']); ?>">
                                 <?php echo htmlspecialchars($story['title']); ?>
                             </a>
-                            <span class="pr-2 pb-1 has-text-grey is-size-6">(<?php echo htmlspecialchars($story['domain']); ?>)</span>
+                            <span class="has-text-grey is-size-6 ml-2">(<?php echo htmlspecialchars($story['domain']); ?>)</span>
                         </p>
-                        <p class="subtitle is-6">
-                            <span class="pr-2 pb-1"><i class="fa-solid fa-clock"></i> <?php echo htmlspecialchars($story['time_ago']); ?></span>
-                            <span class="pr-2"><i class="fa-solid fa-arrow-up"></i> <?php echo (int)$story['score']; ?></span>
-                            <span class="pr-2"><i class="fa-solid fa-comment"></i> <?php echo (int)$story['comments_count']; ?></span>
+                        <p class="subtitle is-6 mb-3">
+                            <span class="mr-3"><i class="fa-solid fa-clock"></i> <?php echo htmlspecialchars($story['time_ago']); ?></span>
+                            <span class="mr-3"><i class="fa-solid fa-arrow-up"></i> <?php echo (int)$story['score']; ?></span>
+                            <span class="mr-3"><i class="fa-solid fa-comment"></i> <?php echo (int)$story['comments_count']; ?></span>
                         </p>
                         <div class="story-actions">
                             <?php 
                             $summary_files = $story['summary_files'] ?? ['has_story_summary' => false, 'has_comments_summary' => false];
                             if ($summary_files['has_story_summary'] || $summary_files['has_comments_summary']): 
                             ?>
-                            <a href="/summary/<?php echo htmlspecialchars($story['id']); ?>" class="button is-small pl-3">
+                            <a href="/summary/<?php echo htmlspecialchars($story['id']); ?>" class="button is-small">
                                 <span>Summary</span>
                             </a>
                             <?php else: ?>
-                            <a href="<?php echo htmlspecialchars($story['comments_url']); ?>" class="button is-small pl-3">
+                            <a href="<?php echo htmlspecialchars($story['comments_url']); ?>" class="button is-small">
                                 <span>Comments</span>
                             </a>
                             <?php endif; ?>
@@ -91,7 +91,7 @@ include __DIR__ . '/partials/head.php';
             
             <!-- Pagination -->
             <?php if ($stories['pagination']['has_more']): ?>
-            <div class="pagination-wrapper has-text-centered mt-5">
+            <div class="has-text-centered mt-6">
                 <a href="/?type=<?php echo htmlspecialchars($stories['type']); ?>&page=<?php echo (int)$stories['pagination']['next_page']; ?>" 
                    class="button is-primary is-medium">
                     <span>More Stories</span>
