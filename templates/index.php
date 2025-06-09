@@ -65,7 +65,7 @@ include __DIR__ . '/partials/head.php';
                             </a>
                             <span class="has-text-grey is-size-6 ml-2">(<?php echo htmlspecialchars($story['domain']); ?>)</span>
                         </p>
-                        <p class="subtitle is-6 mb-3">
+                        <p class="subtitle is-6 pt-3 mb-3">
                             <span class="mr-3"><i class="fa-solid fa-clock"></i> <?php echo htmlspecialchars($story['time_ago']); ?></span>
                             <span class="mr-3"><i class="fa-solid fa-arrow-up"></i> <?php echo (int)$story['score']; ?></span>
                             <span class="mr-3"><i class="fa-solid fa-comment"></i> <?php echo (int)$story['comments_count']; ?></span>
