@@ -12,5 +12,6 @@
             <link rel="stylesheet" href="<?php echo htmlspecialchars($css_url); ?>">
         <?php endforeach; ?>
     <?php endif; ?>
+    <script src="<?php echo asset_url('/static/js/site.js'); ?>" defer></script>
 </head>
 <body> 

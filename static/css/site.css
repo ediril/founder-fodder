@@ -1,13 +1,13 @@
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+    background: var(--bg-primary);
     min-height: 100vh;
-    color: #333;
+    color: var(--text-primary);
 }
 
 /* Hero section with orange gradient */
 .hero {
-    background: linear-gradient(120deg, #ff6600 0%, #ff9248 100%);
+    background: linear-gradient(120deg, #d84800 0%, #f05d1f 100%);
     color: white;
     margin-bottom: 0;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -29,22 +29,22 @@ body {
 
 .footer {
     font-size: 0.8rem;
-    background-color: #f8f9fa;
+    background-color: var(--bg-footer);
     padding: 0.6rem;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--border-color);
 }
 
 .footer a {
-    color: #ff6600;
+    color: #d84800;
 }
 
 .section {
     padding: 1rem 1.5rem;
 
-    background-color: #e5e5f7;
+    background-color: var(--pattern-overlay);
     opacity: 0.8;
     background-size: 4px 4px;
-    background-image: repeating-linear-gradient(135deg, #888888 0, #888888 0.6000000000000001px, #e5e5f7 0, #e5e5f7 50%);    
+    background-image: repeating-linear-gradient(135deg, var(--pattern-bg) 0, var(--pattern-bg) 0.6000000000000001px, var(--pattern-overlay) 0, var(--pattern-overlay) 50%);    
 }
 
 .container {
@@ -52,13 +52,20 @@ body {
 }
 
 .title {
-    color: #ff6600;
+    color: #d84800;
     font-weight: 700;
     letter-spacing: -0.5px;
 }
 
+/* Override title color only in content sections where we want text color */
+.summary-content .title,
+.box .title,
+.content .title {
+    color: var(--text-primary) !important;
+}
+
 .subtitle {
-    color: #555;
+    color: var(--text-secondary);
     font-weight: 400;
 }
 
@@ -84,7 +91,7 @@ body {
 }
 .card-image {
     height: 180px;
-    background-color: #f5f5f5;
+    background-color: var(--bg-card-footer);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -151,34 +158,34 @@ body {
 }
 
 .card-content .title a {
-    color: #333;
+    color: var(--text-primary);
     transition: color 0.2s ease;
 }
 
 .card-content .title a:hover {
-    color: #ff6600;
+    color: #d84800;
     text-decoration: none;
 }
 
 .card-content .subtitle {
     font-size: 0.85rem;
-    color: #777;
+    color: var(--text-tertiary);
 }
 
 .card-footer {
-    background-color: #f9f9f9;
-    border-top: 1px solid #eee;
+    background-color: var(--bg-card-footer);
+    border-top: 1px solid var(--border-color);
 }
 
 .card-footer-item {
-    color: #666;
+    color: var(--text-muted);
     font-size: 0.9rem;
     transition: color 0.2s ease, background-color 0.2s ease;
 }
 
 .card-footer-item:hover {
-    background-color: #f3f3f3;
-    color: #ff6600;
+    background-color: var(--bg-card-footer);
+    color: #d84800;
 }
 
 .loader-container {
@@ -188,7 +195,7 @@ body {
 }
 
 .loader {
-    border-color: #ff6600 transparent transparent transparent;
+    border-color: #d84800 transparent transparent transparent;
 }
 
 .story-filters {
@@ -213,11 +220,11 @@ body {
 }
 
 .story-filters .button.is-primary {
-    background-color: #ff6600;
+    background-color: #d84800;
 }
 
 .story-filters .button.is-primary:hover {
-    background-color: #e65c00;
+    background-color: #b83d00;
 }
 
 /* Story List Layout */
@@ -230,9 +237,9 @@ body {
 
 .story-card {
     display: flex;
-    background: white;
+    background: var(--bg-card);
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px var(--shadow-light);
     min-height: 140px;
     overflow: hidden;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -240,7 +247,7 @@ body {
 
 .story-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 8px var(--shadow-medium);
 }
 
 .story-image {
@@ -256,7 +263,7 @@ body {
     height: 100%;
     object-fit: cover;
     object-position: center;
-    background-color: #f5f5f5;
+    background-color: var(--bg-card-footer);
 }
 
 .story-content {
@@ -276,7 +283,7 @@ body {
 .story-content .subtitle {
     margin-bottom: 0.25em;
     font-size: 0.85rem;
-    color: #777;
+    color: var(--text-tertiary);
 }
 
 .story-actions {
@@ -286,9 +293,9 @@ body {
 }
 
 .story-actions .button {
-    background-color: #f5f5f5;
+    background-color: var(--bg-card-footer);
     border: none;
-    color: #666;
+    color: var(--text-muted);
     transition: all 0.2s ease;
     font-size: 0.8rem;
     padding: 0.25rem 0.5rem;
@@ -296,7 +303,7 @@ body {
 }
 
 .story-actions .button:hover {
-    background-color: #ff6600;
+    background-color: #d84800;
     color: white;
     transform: translateY(-1px);
 }
@@ -311,9 +318,9 @@ body {
 }
 
 .last-updated-card {
-    background: white;
+    background: var(--bg-card);
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px var(--shadow-light);
     padding: 0.4rem 0.6rem;
     display: inline-block;
 }
@@ -322,7 +329,7 @@ body {
 .image-placeholder {
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #ff7b00 0%, #ff6600 100%);
+    background: linear-gradient(135deg, #f05d1f 0%, #d84800 100%);
     color: white;
     display: flex;
     align-items: center;
@@ -337,7 +344,7 @@ body {
 
 /* Summary page styles */
 .summary-hero {
-    background: linear-gradient(135deg, #ff6600 0%, #ff9248 100%);
+    background: linear-gradient(135deg, #d84800 0%, #f05d1f 100%);
     position: relative;
     overflow: hidden;
 }
@@ -429,40 +436,67 @@ body {
 
 /* Markdown content styling */
 .markdown-body {
-    font-size: 1.05rem;
-    line-height: 1.6;
+    font-size: 1.15rem;
+    line-height: 1.7;
     background-color: transparent !important;
-    color: #333;
+    color: var(--text-primary);
 }
 
 /* Override GitHub Markdown CSS with higher specificity */
 .summary-content .markdown-body,
 .box .markdown-body {
-    color: #222 !important;
+    color: var(--text-primary) !important;
     font-weight: 400;
+    font-size: 1.2rem !important;
+    line-height: 1.7 !important;
 }
 
 .summary-content .markdown-body p,
 .box .markdown-body p {
-    color: #222 !important;
+    color: var(--text-primary) !important;
+    font-size: 1.2rem !important;
+    line-height: 1.7 !important;
 }
 
 .summary-content .markdown-body li,
 .box .markdown-body li {
-    color: #222 !important;
+    color: var(--text-primary) !important;
+    font-size: 1.2rem !important;
+    line-height: 1.7 !important;
 }
 
 .markdown-body h1, 
 .markdown-body h2, 
-.markdown-body h3 {
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
     margin-top: 1.5rem;
     margin-bottom: 1rem;
     font-weight: 600;
-    color: #222 !important;
+    color: var(--text-primary) !important;
+}
+
+/* Additional heading overrides for summary pages */
+.summary-content h1,
+.summary-content h2,
+.summary-content h3,
+.summary-content h4,
+.summary-content h5,
+.summary-content h6,
+.box h1,
+.box h2,
+.box h3,
+.box h4,
+.box h5,
+.box h6 {
+    color: var(--text-primary) !important;
 }
 
 .markdown-body p {
     margin-bottom: 1.25rem;
+    font-size: 1.2rem !important;
+    line-height: 1.7 !important;
 }
 
 .markdown-body ul, 
@@ -473,23 +507,25 @@ body {
 
 .markdown-body li {
     margin-bottom: 0.5rem;
+    font-size: 1.2rem !important;
+    line-height: 1.7 !important;
 }
 
 .markdown-body blockquote {
-    border-left: 4px solid #ff6600;
+    border-left: 4px solid #d84800;
     padding-left: 1rem;
     margin-left: 0;
 }
 
 .markdown-body code {
-    background-color: #f5f5f5;
+    background-color: var(--bg-card-footer);
     padding: 0.2rem 0.4rem;
     border-radius: 3px;
     font-size: 0.9em;
 }
 
 .markdown-body pre {
-    background-color: #f5f5f5 !important;
+    background-color: var(--bg-card-footer) !important;
     padding: 1rem;
     border-radius: 5px;
     overflow-x: auto;
@@ -516,6 +552,19 @@ body {
     .summary-content.markdown-body ul,
     .summary-content.markdown-body ol {
         padding-left: 0;
+    }
+    
+    /* Increase markdown text size for mobile readability */
+    .markdown-body {
+        font-size: 1.2rem;
+        line-height: 1.75;
+    }
+    
+    .markdown-body p,
+    .summary-content .markdown-body p,
+    .box .markdown-body p {
+        font-size: 1.2rem;
+        line-height: 1.75;
     }
     
     /* Mobile styles for story cards */
@@ -591,4 +640,376 @@ body {
 .footer .content p {
     margin: 0;
     padding: 0;
+}
+
+/* ================================
+   DARK MODE STYLES
+   ================================ */
+
+:root {
+  /* Light mode variables (defaults) */
+  --bg-primary: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+  --bg-secondary: #e5e5f7;
+  --bg-card: #ffffff;
+  --bg-footer: #f8f9fa;
+  --bg-card-footer: #f9f9f9;
+  --text-primary: #333;
+  --text-secondary: #555;
+  --text-tertiary: #777;
+  --text-muted: #666;
+  --text-bold: #1a1a1a;
+  --border-color: #eee;
+  --shadow-light: rgba(0, 0, 0, 0.1);
+  --shadow-medium: rgba(0, 0, 0, 0.15);
+  --hero-gradient: linear-gradient(120deg, #d84800 0%, #f05d1f 100%);
+  --pattern-bg: #888888;
+  --pattern-overlay: #e5e5f7;
+}
+
+/* Dark mode variables */
+[data-theme="dark"] {
+  --bg-primary: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  --bg-secondary: #1e1e1e;
+  --bg-card: #2a2a2a;
+  --bg-footer: #1a1a1a;
+  --bg-card-footer: #242424;
+  --text-primary: #e0e0e0;
+  --text-secondary: #c0c0c0;
+  --text-tertiary: #a0a0a0;
+  --text-muted: #888;
+  --text-bold: #f5f5f5;
+  --border-color: #404040;
+  --shadow-light: rgba(0, 0, 0, 0.3);
+  --shadow-medium: rgba(0, 0, 0, 0.4);
+  --hero-gradient: linear-gradient(120deg, #d84800 0%, #f05d1f 100%);
+  --pattern-bg: #404040;
+  --pattern-overlay: #1e1e1e;
+}
+
+/* Auto dark mode based on system preference */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-primary: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    --bg-secondary: #1e1e1e;
+    --bg-card: #2a2a2a;
+    --bg-footer: #1a1a1a;
+    --bg-card-footer: #242424;
+    --text-primary: #e0e0e0;
+    --text-secondary: #c0c0c0;
+    --text-tertiary: #a0a0a0;
+    --text-muted: #888;
+    --text-bold: #f5f5f5;
+    --border-color: #404040;
+    --shadow-light: rgba(0, 0, 0, 0.3);
+    --shadow-medium: rgba(0, 0, 0, 0.4);
+    --hero-gradient: linear-gradient(120deg, #d84800 0%, #f05d1f 100%);
+    --pattern-bg: #404040;
+    --pattern-overlay: #1e1e1e;
+  }
+}
+
+/* Apply CSS variables to existing elements */
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  position: relative; /* Make body a positioned container for absolute positioning */
+  min-height: 100vh; /* Ensure body takes full height */
+}
+
+.section {
+  background-color: var(--pattern-overlay);
+  background-image: repeating-linear-gradient(135deg, var(--pattern-bg) 0, var(--pattern-bg) 0.6000000000000001px, var(--pattern-overlay) 0, var(--pattern-overlay) 50%);
+}
+
+.title {
+  color: #d84800; /* Keep brand orange for consistency */
+}
+
+.subtitle {
+  color: var(--text-secondary);
+}
+
+.card {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.card-content .title a {
+  color: var(--text-primary);
+}
+
+.card-content .subtitle {
+  color: var(--text-tertiary);
+}
+
+.card-footer {
+  background-color: var(--bg-card-footer);
+  border-top: 1px solid var(--border-color);
+}
+
+.card-footer-item {
+  color: var(--text-muted);
+}
+
+.card-footer-item:hover {
+  background-color: var(--bg-card-footer);
+  color: #d84800;
+}
+
+.footer {
+  background-color: var(--bg-footer);
+  border-top: 1px solid var(--border-color);
+}
+
+.story-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+.story-content .title a {
+  color: var(--text-primary);
+}
+
+.story-content .subtitle {
+  color: var(--text-tertiary);
+}
+
+.summary-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+.summary-content {
+  color: var(--text-primary);
+}
+
+.summary-last-updated {
+  color: var(--text-muted);
+}
+
+.markdown-body {
+  color: var(--text-primary);
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+  color: var(--text-primary);
+}
+
+.markdown-body p,
+.markdown-body li {
+  color: var(--text-primary);
+}
+
+.markdown-body blockquote {
+  border-left: 4px solid #d84800;
+  background-color: var(--bg-card-footer);
+  color: var(--text-secondary);
+}
+
+.markdown-body code {
+  background-color: var(--bg-card-footer);
+  color: var(--text-primary);
+}
+
+.markdown-body strong,
+.markdown-body b {
+  color: var(--text-bold) !important;
+  font-weight: 700 !important;
+}
+
+.summary-content strong,
+.summary-content b,
+.box strong,
+.box b {
+  color: var(--text-bold) !important;
+  font-weight: 700 !important;
+}
+
+.markdown-body pre {
+  background-color: var(--bg-card-footer);
+  border: 1px solid var(--border-color);
+}
+
+.last-updated-card {
+  color: var(--text-muted);
+}
+
+/* Bulma box and content elements for dark mode */
+.box {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.content {
+  color: var(--text-primary);
+}
+
+.content h1,
+.content h2,
+.content h3,
+.content h4,
+.content h5,
+.content h6 {
+  color: var(--text-primary) !important;
+}
+
+/* Extra heading color fixes for Bulma elements */
+h1.title, h2.title, h3.title, h4.title, h5.title, h6.title {
+  color: var(--text-primary) !important;
+}
+
+.title.is-1, .title.is-2, .title.is-3, .title.is-4, .title.is-5, .title.is-6 {
+  color: var(--text-primary) !important;
+}
+
+.content p {
+  color: var(--text-primary);
+}
+
+.content a {
+  color: #d84800;
+}
+
+.content a:hover {
+  color: #b83d00;
+}
+
+/* Notification styles for dark mode */
+.notification.is-warning {
+  background-color: #ffeaa7;
+  color: #2d3436;
+}
+
+[data-theme="dark"] .notification.is-warning {
+  background-color: #8b7a00;
+  color: #fff3cd;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .notification.is-warning {
+    background-color: #8b7a00;
+    color: #fff3cd;
+  }
+}
+
+/* Button styles adjustment for dark mode */
+.button {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.button:hover {
+  background-color: var(--bg-card-footer);
+}
+
+.button.is-primary {
+  background-color: #d84800;
+  color: white;
+}
+
+.button.is-primary:hover {
+  background-color: #b83d00;
+}
+
+/* Dark mode toggle button styles */
+.dark-mode-toggle {
+  position: absolute !important;
+  bottom: 20px !important;
+  left: 20px !important;
+  z-index: 99999 !important;
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary) !important;
+  padding: 8px 12px !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 2px 8px var(--shadow-light) !important;
+  font-size: 0.9rem !important;
+  font-weight: 500 !important;
+  -webkit-tap-highlight-color: transparent !important;
+  touch-action: manipulation !important;
+  display: inline-block !important;
+}
+
+.dark-mode-toggle:hover {
+  background: var(--bg-card-footer);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--shadow-medium);
+}
+
+.dark-mode-toggle i {
+  margin: 0; /* No margin needed for icon-only button */
+}
+
+/* Mobile responsive adjustments for dark mode toggle */
+@media (max-width: 768px) {
+  .dark-mode-toggle {
+    position: absolute !important;
+    bottom: 15px !important;
+    left: 15px !important;
+    z-index: 99999 !important;
+    padding: 10px !important;
+    font-size: 1rem !important;
+    border-radius: 50% !important;
+    width: 44px !important;
+    height: 44px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transform: none !important;
+  }
+  
+  .dark-mode-toggle:hover {
+    transform: translateY(-1px) !important;
+  }
+  
+  .dark-mode-toggle i {
+    margin: 0 !important;
+  }
+}
+
+/* Tablet adjustments */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .dark-mode-toggle {
+    position: absolute !important;
+    bottom: 18px !important;
+    left: 18px !important;
+    z-index: 99999 !important;
+    padding: 10px 12px !important;
+    font-size: 1rem !important;
+    border-radius: 6px !important;
+    transform: none !important;
+  }
+  
+  .dark-mode-toggle:hover {
+    transform: translateY(-1px) !important;
+  }
+}
+
+/* Ensure proper contrast for links in dark mode */
+a {
+  color: #d84800;
+}
+
+a:hover {
+  color: #b83d00;
+}
+
+/* Input and form elements for dark mode */
+input, textarea, select {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: #d84800;
+  box-shadow: 0 0 0 0.125em rgba(216, 72, 0, 0.25);
 }
