@@ -5,6 +5,7 @@
 # General Coding Guidelines
 - Regarding imports, group standard library, third-party, and local imports with a blank line between groups.
 - Don't keep backwards compatibility unless explicitly told to do so.
+- Always test your changes, make sure they work as expected and did not break any previous functionality.
 
 # JavaScript
 - Use ES6 features, camelCase for variables and functions.

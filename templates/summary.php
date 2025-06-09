@@ -12,6 +12,10 @@ include __DIR__ . '/partials/head.php';
     <section class="hero is-small summary-hero">
         <div class="hero-body">
             <div class="container">
+                <a href="javascript:history.back()" class="back-button">
+                    <span class="icon"><i class="fa-solid fa-arrow-left"></i></span>
+                    <span>Back</span>
+                </a>
                 <h1 class="summary-title">
                     <?php echo htmlspecialchars($story['title']); ?>
                 </h1>
