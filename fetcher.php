@@ -51,25 +51,6 @@ class HackerNewsFetcher
         releaseLock($this->lockHandle, FETCHER_LOCK_FILE_NAME);
     }
 
-    private function fetchUrl(string $url, int $timeout = 30, bool $headersOnly = false): string|array|false
-    {
-        $context = stream_context_create([
-            'http' => [
-                'timeout' => $timeout,
-                'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'method' => $headersOnly ? 'HEAD' : 'GET'
-            ]
-        ]);
-
-        dispatch_signal();
-
-        if ($headersOnly) {
-            return @get_headers($url, true, $context);
-        } else {
-            return @file_get_contents($url, false, $context);
-        }
-    }
-
     private function fetchStoryIds(string $storyType): array
     {
         $url = self::ENDPOINTS[$storyType] ?? null;
@@ -78,7 +59,7 @@ class HackerNewsFetcher
             return [];
         }
 
-        $response = $this->fetchUrl($url);
+        $response = fetchUrl($url);
         if ($response === false) {
             echo "Error fetching {$storyType} stories\n";
             return [];
@@ -92,7 +73,7 @@ class HackerNewsFetcher
     {
         $url = self::ITEM_URL . "/{$storyId}.json";
         
-        $response = $this->fetchUrl($url);
+        $response = fetchUrl($url);
         if ($response === false) {
             echo "Error fetching story {$storyId}\n";
             return null;
@@ -120,7 +101,7 @@ class HackerNewsFetcher
 
         try {
             // First check if the URL is actually an image
-            $headers = $this->fetchUrl($imageUrl, 10, true);
+            $headers = fetchUrl($imageUrl, 10, [], true);
             $contentType = '';
             if ($headers && isset($headers['Content-Type'])) {
                 $contentType = is_array($headers['Content-Type']) 
@@ -137,7 +118,7 @@ class HackerNewsFetcher
             }
 
             // Download the image
-            $imageData = $this->fetchUrl($imageUrl, 10);
+            $imageData = fetchUrl($imageUrl, 10);
             if ($imageData === false) {
                 echo "Failed to download image for story {$storyId}\n";
                 return;
@@ -166,11 +147,22 @@ class HackerNewsFetcher
     private function extractImageFromPage(string $url): ?string
     {
         try {
-            $html = $this->fetchUrl($url, 10);
+            $html = fetchUrl($url, 10);
             if ($html === false) {
+                echo "Failed to fetch or empty HTML content for URL: {$url}\n";
                 return null;
             }
 
+            return $this->extractImageFromPageWithHtml($url, $html);
+        } catch (\Exception $e) {
+            echo "Error extracting image from {$url}: " . $e->getMessage() . "\n";
+            return null;
+        }
+    }
+    
+    private function extractImageFromPageWithHtml(string $url, string $html): ?string
+    {
+        try {
             $dom = new \DOMDocument();
             @$dom->loadHTML($html);
             $xpath = new \DOMXPath($dom);
@@ -260,13 +252,13 @@ class HackerNewsFetcher
 
             print("Fetching page {$url}\n");
 
-            $html = $this->fetchUrl($url, 10);
+            $html = fetchUrl($url, 10);
             if ($html === false) {
-                echo "Failed to fetch page {$url}\n";
+                echo "Failed to fetch page {$url} or empty content\n";
                 return null;
             }
 
-            return $this->extractImageFromPage($url);
+            return $this->extractImageFromPageWithHtml($url, $html);
 
         } catch (\Exception $e) {
             echo "Error extracting image from {$url}: " . $e->getMessage() . "\n";

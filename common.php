@@ -5,8 +5,8 @@ const MAX_FETCH = 200;                  // 20 pages worth
 const MAX_SUMMARIZE = 30;               // 3 pages worth
 const MIN_STORY_LENGTH_FOR_SUMMARY = 250;
 
-const FETCHER_VERSION = "0.0606.003";
-const SUMMARIZER_VERSION = "0.0606.006";
+const FETCHER_VERSION = "0.0609.001";
+const SUMMARIZER_VERSION = "0.0609.001";
 
 const FETCHER_LOCK_FILE_NAME = 'ff_fetch.lock';
 const SUMMARIZER_LOCK_FILE_NAME = 'ff_summarize.lock';
@@ -134,4 +134,34 @@ function debugLog($message) {
 
 function logMessage(string $message): void {
     echo '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
+}
+
+function fetchUrl(string $url, int $timeout = 10, array $headers = [], bool $headersOnly = false): string|array|false
+{
+    $defaultHeaders = [
+        'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    ];
+    
+    $allHeaders = array_merge($defaultHeaders, $headers);
+    
+    $context = stream_context_create([
+        'http' => [
+            'method' => $headersOnly ? 'HEAD' : 'GET',
+            'header' => implode("\r\n", $allHeaders),
+            'timeout' => $timeout
+        ]
+    ]);
+
+    dispatch_signal();
+
+    if ($headersOnly) {
+        return @get_headers($url, true, $context);
+    } else {
+        $content = @file_get_contents($url, false, $context);
+        // Return false if content is false, empty, or just whitespace
+        if ($content === false || empty(trim($content))) {
+            return false;
+        }
+        return $content;
+    }
 }

@@ -108,30 +108,6 @@ class StorySummarizer {
     }
     
     /**
-     * Centralized HTTP request method with signal handling
-     */
-    private function fetchUrl(string $url, int $timeout = 10, array $headers = []): string|false
-    {
-        $defaultHeaders = [
-            'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        ];
-        
-        $allHeaders = array_merge($defaultHeaders, $headers);
-        
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'GET',
-                'header' => implode("\r\n", $allHeaders),
-                'timeout' => $timeout
-            ]
-        ]);
-
-        dispatch_signal();
-
-        return @file_get_contents($url, false, $context);
-    }
-    
-    /**
      * Fetch and extract main content from a story URL
      */
     private function fetchStoryContent($url) {
@@ -140,7 +116,7 @@ class StorySummarizer {
         }
         
         try {
-            $content = $this->fetchUrl($url);
+            $content = fetchUrl($url);
             if ($content === false) {
                 return "Failed to fetch content from URL.";
             }
@@ -198,7 +174,7 @@ class StorySummarizer {
     private function fetchComment($commentId) {
         try {
             $url = HN_ITEM_URL . "/{$commentId}.json";
-            $content = $this->fetchUrl($url);
+            $content = fetchUrl($url);
             if ($content === false) {
                 return null;
             }
@@ -445,7 +421,7 @@ class StorySummarizer {
         
         // Fetch the story details to get the top-level comment IDs
         $url = HN_ITEM_URL . "/{$storyId}.json";
-        $content = $this->fetchUrl($url);
+        $content = fetchUrl($url);
         if ($content === false) {
             return "Failed to fetch story details.";
         }
