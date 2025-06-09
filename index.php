@@ -148,6 +148,10 @@ function batch_check_image_files(array $story_ids): array {
             $img_path = "static/img/stories/{$story_id}.png";
             $results[$story_id] = file_exists($img_path) ? "png" : null;
         }
+        if (!$results[$story_id]) {
+            $img_path = "static/img/stories/{$story_id}.webp";
+            $results[$story_id] = file_exists($img_path) ? "webp" : null;
+        }
     }
     
     return $results;
@@ -322,6 +326,9 @@ if ($path === '/' || $path === '/index.php') {
                 break;
             case 'png':
                 header('Content-Type: image/png');
+                break;
+            case 'webp':
+                header('Content-Type: image/webp');
                 break;
         }
         
