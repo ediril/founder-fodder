@@ -28,6 +28,11 @@ include __DIR__ . '/partials/head.php';
     <section class="section summary-section">
         <div class="container">
             <div class="content">
+                <?php 
+                // Initialize Parsedown once for use throughout the template
+                $parsedown = new Parsedown();
+                ?>
+                
                 <?php if ($has_story_summary): ?>
                 <div class="box summary-card">
                     <h2 class="is-4 has-text-weight-bold mb-2">
@@ -43,7 +48,6 @@ include __DIR__ . '/partials/head.php';
                     <div class="summary-content markdown-body">
                         <?php 
                         // Convert Markdown to HTML using Parsedown
-                        $parsedown = new Parsedown();
                         echo $parsedown->text($story_summary);
                         ?>
                     </div>
