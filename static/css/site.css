@@ -165,6 +165,7 @@ a:hover {
    PATTERN SECTION
    ================================ */
 .section {
+  padding: 1.5rem;
   background-color: var(--pattern-overlay);
   opacity: 0.8;
   background-size: 4px 4px;
@@ -283,6 +284,10 @@ a:hover {
 /* ================================
    STORY COMPONENTS
    ================================ */
+.buttons.story-filters {
+  flex-wrap: nowrap;
+}
+
 .story-filters .button {
   min-width: 80px;
   border-radius: 4px;

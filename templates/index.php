@@ -17,7 +17,7 @@ include __DIR__ . '/partials/head.php';
     
     <section class="section">
         <div class="container">
-            <div class="buttons is-centered story-filters mb-5">
+            <div class="buttons is-centered story-filters mb-2">
                 <a href="/?type=top" class="button <?php echo ($stories['type'] === 'top') ? 'is-primary' : ''; ?>">
                     <span class="icon"><i class="fa-solid fa-arrow-trend-up"></i></span>
                     <span>Top</span>
