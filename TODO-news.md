@@ -2,8 +2,6 @@
 
 - Put estimates of "x min read" both on the story cards and comments
 
-- Add TODO page with feature requests like levelsio
-
 - Check if comments are getting updated every 6 hours within 24 hours
 
 - Fetcher: We can do the fetch and store in one go

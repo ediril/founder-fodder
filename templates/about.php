@@ -38,10 +38,10 @@ include __DIR__ . '/partials/head.php';
                     In addition, it generates summaries of both the stories and the comments they receive. 
                 </p>
                 
-                <h2 class="title is-4">Contact</h2>
+                <h2 class="title is-4">Ideas & Bugs</h2>
                 <p>
-                    If you have any suggestions, please reach out to me at
-                    <a href="https://x.com/emrahdx">@emrahdx</a>.
+                    If you have any suggestions or would like to report a bug, you can 
+                    submit it <a href="https://emrahdx.featurebase.app/">here</a>.
                 </p>                
             </div>
         </div>
