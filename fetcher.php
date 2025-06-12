@@ -117,15 +117,8 @@ class HackerNewsFetcher
                 }
             }
 
-            // Download the image
-            $imageData = fetchUrl($imageUrl, 10);
-            if ($imageData === false) {
-                echo "Failed to download image for story {$storyId}\n";
-                return;
-            }
-
-            // Determine file extension
-            $ext = '.jpg'; // default
+            // Determine file extension (default .jpg)
+            $ext = '.jpg';
             if (str_contains($contentType, 'png')) {
                 $ext = '.png';
             } elseif (str_contains($contentType, 'gif')) {
@@ -135,8 +128,13 @@ class HackerNewsFetcher
             }
 
             $filepath = $this->imgDir . "/{$storyId}{$ext}";
-            if (file_put_contents($filepath, $imageData) !== false) {
+
+            // Stream download directly to disk to avoid high memory usage
+            $success = downloadUrlToFile($imageUrl, $filepath, 10);
+            if ($success) {
                 echo "Successfully downloaded image for story {$storyId}\n";
+            } else {
+                echo "Failed to download image for story {$storyId}\n";
             }
 
         } catch (\Exception $e) {

@@ -157,11 +157,72 @@ function fetchUrl(string $url, int $timeout = 10, array $headers = [], bool $hea
     if ($headersOnly) {
         return @get_headers($url, true, $context);
     } else {
-        $content = @file_get_contents($url, false, $context);
+        // Prefer cURL over file_get_contents to avoid internal buffering overhead.
+        if (function_exists('curl_init')) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_TIMEOUT        => $timeout,
+                CURLOPT_CONNECTTIMEOUT => $timeout,
+                CURLOPT_USERAGENT      => $defaultHeaders[0],
+                CURLOPT_HTTPHEADER     => $allHeaders,
+            ]);
+
+            $content = curl_exec($ch);
+            curl_close($ch);
+        } else {
+            // Fallback if cURL is not available
+            $content = @file_get_contents($url, false, $context);
+        }
+
         // Return false if content is false, empty, or just whitespace
-        if ($content === false || empty(trim($content))) {
+        if ($content === false || empty(trim((string)$content))) {
             return false;
         }
         return $content;
     }
+}
+
+// Stream-download a URL directly to a local file to avoid holding the whole
+// response in memory. Returns true on success, false on failure.
+function downloadUrlToFile(string $url, string $destPath, int $timeout = 15, array $headers = []): bool
+{
+    $defaultHeaders = [
+        'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    ];
+
+    $allHeaders = array_merge($defaultHeaders, $headers);
+
+    // Open destination file for writing (binary-safe)
+    $fp = fopen($destPath, 'wb');
+    if ($fp === false) {
+        return false;
+    }
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_FILE            => $fp,         // write directly to file
+        CURLOPT_FOLLOWLOCATION  => true,
+        CURLOPT_CONNECTTIMEOUT  => $timeout,
+        CURLOPT_TIMEOUT         => $timeout,
+        CURLOPT_FAILONERROR     => true,        // treat HTTP >= 400 as error
+        CURLOPT_HTTPHEADER      => $allHeaders,
+        CURLOPT_USERAGENT       => $allHeaders[0] ?? '',
+    ]);
+
+    dispatch_signal();
+
+    $success = curl_exec($ch) !== false;
+    curl_close($ch);
+    fclose($fp);
+
+    if (!$success) {
+        // Remove partial file if download failed
+        if (file_exists($destPath)) {
+            unlink($destPath);
+        }
+    }
+
+    return $success;
 }
