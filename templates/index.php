@@ -63,26 +63,45 @@ include __DIR__ . '/partials/head.php';
                             <a href="<?php echo htmlspecialchars($story['url']); ?>">
                                 <?php echo htmlspecialchars($story['title']); ?>
                             </a>
-                            <span class="has-text-grey is-size-6 ml-2">(<?php echo htmlspecialchars($story['domain']); ?>)</span>
+                            <span class="has-text-grey is-size-6">(<?php echo htmlspecialchars($story['domain']); ?>)</span>
                         </p>
                         <p class="subtitle is-6 pt-3 mb-3">
                             <span class="mr-3"><i class="fa-solid fa-clock"></i> <?php echo htmlspecialchars($story['time_ago']); ?></span>
                             <span class="mr-3"><i class="fa-solid fa-arrow-up"></i> <?php echo (int)$story['score']; ?></span>
                             <span class="mr-3"><i class="fa-solid fa-comment"></i> <?php echo (int)$story['comments_count']; ?></span>
                         </p>
+                        <?php
+                        $summary_files = $story['summary_files'] ?? ['has_story_summary' => false];
+                        $excerpt = "";
+                        if ($summary_files['has_story_summary']) {
+                            $summary_path = __DIR__ . '/../static/content/' . $story['id'] . '-story-summary.md';
+                            $raw_summary = file_get_contents($summary_path);
+                            $parts = preg_split('/\R{2,}/', $raw_summary, 2); // split on empty line
+                            $excerpt = trim($parts[0]);
+                            // Basic cleanup of markdown characters
+                            $excerpt = preg_replace('/^[#>*\-\s]+/m', '', $excerpt); // remove markdown bullets/heading chars
+                            $excerpt = preg_replace('/\[(.*?)\]\((.*?)\)/', '$1', $excerpt); // remove markdown links
+                            if (strlen($excerpt) > 250) {
+                                $excerpt = substr($excerpt, 0, 250) . '...';
+                            }
+                        } 
+                        ?>
                         <div class="story-actions">
-                            <?php 
-                            $summary_files = $story['summary_files'] ?? ['has_story_summary' => false, 'has_comments_summary' => false];
-                            if ($summary_files['has_story_summary'] || $summary_files['has_comments_summary']): 
-                            ?>
-                            <a href="/summary/<?php echo htmlspecialchars($story['id']); ?>" class="button is-small">
-                                <span>Summary</span>
-                            </a>
-                            <?php else: ?>
+                        <?php if (str_contains($excerpt, 'Story is too short to summarize') ||
+                                  str_contains($excerpt, 'Story content not detected') ||
+                                  empty($excerpt)): ?>
                             <a href="<?php echo htmlspecialchars($story['comments_url']); ?>" class="button is-small">
                                 <span>Comments</span>
                             </a>
-                            <?php endif; ?>
+                        <?php else: ?>
+                            <p class="story-excerpt">
+                                <?php echo htmlspecialchars($excerpt); ?>
+                            </p>
+                            <p>
+                                <a class="button is-small mt-2" 
+                                    href="/summary/<?php echo htmlspecialchars($story['id']); ?>"> Read More</a>
+                            </p>
+                        <?php endif; ?>
                         </div>
                     </div>
                 </div>
