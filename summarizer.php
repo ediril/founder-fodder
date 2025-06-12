@@ -18,8 +18,8 @@ $dotenv = Dotenv::createImmutable(__DIR__ . '/../../_env', '.founderfodder.env')
 $dotenv->load();
 
 // Prompts for AI summarization
-const STORY_PROMPT = "Create summary of the following page for main topics and insights. Try to limit summary to 200 words. Don't restate the question, return just summary:\n------\n{content}";
-const COMMENTS_PROMPT = "Create summary of the following discussion for main arguments, opinions, criticisms. Try to limit summary to 600 words. Don't restate the question, return just summary:\n------\n{content}";
+const STORY_PROMPT = "Create summary of the following page for main topics and insights. Do not rephrase or mention the title in the summary. Limit to 250 words. Return just the summary:\n------\n{content}";
+const COMMENTS_PROMPT = "Create summary of the following discussion for main arguments, opinions, criticisms. Do not rephrase or mention the title. Limit to 600 words. Return just summary:\n------\n{content}";
 
 // File naming constants
 const STORY_SUMMARY_FILE = "story-summary.md";
