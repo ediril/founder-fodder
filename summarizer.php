@@ -71,7 +71,6 @@ class StorySummarizer {
         $this->pdo = get_db_connection($dbPath);
         
         if ($dryRun) {
-            echo "DRY-RUN MODE: Will not send content to Gemini API\n";
             $this->client = null;
             $this->model = null;
         } else {
@@ -553,6 +552,7 @@ class StorySummarizer {
             }
             
             if (strlen($storyContent) < MIN_STORY_LENGTH_FOR_SUMMARY) {
+                echo "STORY: " . $storyContent . "\n";
                 logMessage("  Story is too short to summarize (length: " . strlen($storyContent) . ")\n");
                 file_put_contents($storySummaryFile, "Story is too short to summarize");
                 return;
