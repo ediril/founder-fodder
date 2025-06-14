@@ -30,18 +30,18 @@ include __DIR__ . '/partials/head.php';
                     I consider to be an anti-pattern. Yet, I kept myself doing it time and time again.
                 </p>
                 <p>
-                    The stories mirror those found on Hacker News, particularly 
-                    <a href="https://news.ycombinator.com">front page</a> (aka Top), 
+                    The stories mirror Hacker News
+                    <a href="https://news.ycombinator.com">front page</a>, 
                     <a href="https://news.ycombinator.com/best">best</a>, and 
-                    <a href="https://news.ycombinator.com/newest">new</a> stories. 
+                    <a href="https://news.ycombinator.com/newest">new</a> submissions. 
                     It is designed to encourage reading the stories first.
-                    In addition, it generates summaries of both the stories and the comments they receive. 
+                    In addition, it generates summaries of both the stories and their comments to save you time. 
                 </p>
                 
                 <h2 class="title is-4">Ideas & Bugs</h2>
                 <p>
-                    If you have any suggestions or would like to report a bug, you can 
-                    submit it <a href="https://emrahdx.featurebase.app/">here</a>.
+                    If you have any suggestions or would like to report a bug, reach out to 
+                    <a href="https://x.com/emrahdx">me</a>.
                 </p>                
             </div>
         </div>
