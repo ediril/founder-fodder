@@ -1,3 +1,10 @@
+
+- "Active" tab: based on timestamp of most recent comment sorting stories
+
+- Extract mentioned links in the comments and put them in the summaries
+
+- Create a story endpoint i can share as a link on social media
+
 - Make a podcast from the summaries
 
 - Put estimates of "x min read" both on the story cards and comments
