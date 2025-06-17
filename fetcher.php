@@ -390,14 +390,12 @@ class HackerNewsFetcher
             
             // Get the type ID for this story type
             $typeId = STORY_TYPES[$storyType] ?? 0;
-            if ($typeId > 0) {
-                // Shift down the rankings of existing stories that aren't being refetched
-                $placeholders = str_repeat('?,', count($storyIds) - 1) . '?';
-                $stmt = $this->pdo->prepare("
-                    UPDATE ranks 
-                    SET rank = rank + ?
-                    WHERE type = ? AND id NOT IN ({$placeholders})
-                ");
+            if ($typeId > 0 && !empty($storyIds)) {
+                // Build a placeholder list that always matches the parameter count.
+                $placeholders = implode(',', array_fill(0, count($storyIds), '?'));
+
+                $stmt = $this->pdo->prepare("\n                    UPDATE ranks \n                    SET rank = rank + ?\n                    WHERE type = ? AND id NOT IN ({$placeholders})\n                ");
+
                 $params = array_merge([$newStoriesCount, $typeId], $storyIds);
                 $stmt->execute($params);
             }

@@ -5,7 +5,7 @@ const MAX_FETCH = 200;                  // 20 pages worth
 const MAX_SUMMARIZE = 30;               // 3 pages worth
 const MIN_STORY_LENGTH_FOR_SUMMARY = 200;
 
-const FETCHER_VERSION = "0.0613.001";
+const FETCHER_VERSION = "0.0616.001";
 const SUMMARIZER_VERSION = "0.0613.001";
 
 const FETCHER_LOCK_FILE_NAME = 'ff_fetch.lock';
@@ -16,6 +16,7 @@ const STORY_TYPES = [
     "top" => 1,
     "new" => 2,
     "best" => 3,
+    "active" => 4,
 ];
 
 function acquireLock(string $lockName) {
