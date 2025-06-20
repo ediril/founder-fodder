@@ -189,6 +189,13 @@ debugLog("Request URI: $request_uri, Base path: $base_path");
 
 // Remove base path and query string from the request URI
 $path = parse_url($request_uri, PHP_URL_PATH);
+if ($path === null) {
+    debugLog("Malformed URL: $request_uri");
+    http_response_code(400);
+    echo '400 Bad Request - Malformed URL';
+    exit;
+}
+
 if (!empty($base_path) && strpos($path, $base_path) === 0) {
     $path = substr($path, strlen($base_path));
 }
