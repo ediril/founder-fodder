@@ -217,7 +217,7 @@ function asset_url(string $path): string {
 // Handle requests
 if ($path === '/' || $path === '/index.php') {
     // Get stories for the main page
-    $story_type = $_GET['type'] ?? 'top';
+    $story_type = $_GET['type'] ?? 'active';
     $page = max(1, (int)($_GET['page'] ?? 1));
     $per_page = STORIES_PER_PAGE; // Use the constant
     

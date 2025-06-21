@@ -18,6 +18,14 @@ include __DIR__ . '/partials/head.php';
     <section class="section">
         <div class="container">
             <div class="buttons is-centered story-filters mb-2">
+                <a href="/?type=active" class="button <?php echo ($stories['type'] === 'active') ? 'is-primary' : ''; ?>">
+                    <span class="icon"><i class="fa-solid fa-star"></i></span>
+                    <span>Active</span>
+                </a>
+                <a href="/?type=new" class="button <?php echo ($stories['type'] === 'new') ? 'is-primary' : ''; ?>">
+                    <span class="icon"><i class="fa-solid fa-clock"></i></span>
+                    <span>New</span>
+                </a>
                 <a href="/?type=top" class="button <?php echo ($stories['type'] === 'top') ? 'is-primary' : ''; ?>">
                     <span class="icon"><i class="fa-solid fa-arrow-trend-up"></i></span>
                     <span>Top</span>
@@ -25,10 +33,6 @@ include __DIR__ . '/partials/head.php';
                 <a href="/?type=best" class="button <?php echo ($stories['type'] === 'best') ? 'is-primary' : ''; ?>">
                     <span class="icon"><i class="fa-solid fa-star"></i></span>
                     <span>Best</span>
-                </a>
-                <a href="/?type=new" class="button <?php echo ($stories['type'] === 'new') ? 'is-primary' : ''; ?>">
-                    <span class="icon"><i class="fa-solid fa-clock"></i></span>
-                    <span>New</span>
                 </a>
             </div>
             

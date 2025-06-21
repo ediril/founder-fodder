@@ -1,6 +1,6 @@
-- Summarizer: Delete stories, comments and summaries if they were fetched over 1 month ago
 
-- "Active" tab: based on timestamp of most recent comment sorting stories
+
+- Summarizer: Delete stories, comments and summaries if they were fetched over 1 month ago
 
 - Extract mentioned links in the comments and put them in the summaries
 
@@ -24,3 +24,16 @@
 
 - If there is an archive link in the comments (e.g. https://archive.ph/P2cU1), use it to download the story content (otherwise you will get 403 from the original story url)
 
+
+# Directory Ideas
+
+- Online directory of mentors:
+    - Jason Cohan, Derek Sivers, Rob Walling
+
+- Online directory of ideas:
+    - suggested by these mentors
+
+
+# Biz in a box
+- List of things to do, evaluate where you are, suggest what to do
+    - Summarized/distilled from articles from mentors

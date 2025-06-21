@@ -786,7 +786,7 @@ if (count($options) !== count($argv) - 1) {
 if (isset($options['help']) || isset($options['h'])) {
     echo "Usage: php summarize.php [options]\n";
     echo "Options:\n";
-    echo "  --type=STORY-TYPE  Type of stories to summarize (top, new, best, all) [default: all]\n";
+    echo "  --type=STORY-TYPE  Type of stories to summarize (top, new, best, active, all) [default: all]\n";
     echo "  --limit=N          Maximum number of stories to process per type [default: 100]\n";
     echo "  --db=PATH          Path to SQLite database [default: " . DB_PATH . "]\n";
     echo "  --output=PATH      Output directory for content files [default: " . OUTPUT_DIR . "]\n";

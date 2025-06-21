@@ -18,6 +18,7 @@ class HackerNewsFetcher
         "best" => self::BASE_URL . "/beststories.json"  // highest-scoring
     ];
     private const ITEM_URL = self::BASE_URL . "/item";
+    private const ACTIVE_URL = "https://news.ycombinator.com/active";
 
     private string $imgDir;
     private $lockHandle;
@@ -53,6 +54,10 @@ class HackerNewsFetcher
 
     private function fetchStoryIds(string $storyType): array
     {
+        if ($storyType === 'active') {
+            return $this->fetchActiveStories();
+        }
+
         $url = self::ENDPOINTS[$storyType] ?? null;
         if (!$url) {
             echo "Invalid story type: {$storyType}\n";
@@ -69,10 +74,175 @@ class HackerNewsFetcher
         return $data ?? [];
     }
 
+    /**
+     * Fetch active stories by scraping the HTML page
+     */
+    private function fetchActiveStories(int $limit = 200): array
+    {
+        logMessage('Fetching active stories from web page...');
+
+        $pagePath = 'active';
+        $stories = [];
+        $seenIds = [];
+
+        while ($pagePath && count($stories) < $limit) {
+            $html = fetchUrl('https://news.ycombinator.com/' . $pagePath);
+            if ($html === false) {
+                logMessage('Failed to fetch ' . $pagePath);
+                break;
+            }
+
+            [$pageStories, $nextPath] = $this->parseActivePage($html);
+            foreach ($pageStories as $story) {
+                if (count($stories) >= $limit) break;
+                if (isset($seenIds[$story['id']])) continue; // skip duplicates
+                $seenIds[$story['id']] = true;
+                $stories[] = $story;
+            }
+
+            $pagePath = $nextPath;
+        }
+
+        // Return just the story IDs for consistency with other fetch methods
+        return array_column($stories, 'id');
+    }
+
+    /**
+     * Parse a single /active page; return [stories, nextPath].
+     */
+    private function parseActivePage(string $html): array
+    {
+        $dom = new \DOMDocument();
+        @$dom->loadHTML($html);
+        $xpath = new \DOMXPath($dom);
+
+        $stories = [];
+
+        // Iterate through every top level row (class="athing")
+        foreach ($xpath->query('//tr[contains(@class, "athing")]') as $athing) {
+            if (!($athing instanceof \DOMElement)) continue;
+            $id = (int)$athing->getAttribute('id');
+
+            // title & url - modern HN structure uses titleline span
+            $titleAnchor = $xpath->query('.//span[@class="titleline"]/a', $athing)->item(0);
+            if (!$titleAnchor) continue;
+            $title = $titleAnchor->nodeValue;
+            $url = $titleAnchor->getAttribute('href');
+
+            // domain
+            $domain = '';
+            $domainSpan = $xpath->query('.//span[@class="sitestr"]', $athing)->item(0);
+            if ($domainSpan) {
+                $domain = $domainSpan->nodeValue;
+            }
+
+            // subtext row is the next element row
+            $sub = $athing->nextSibling;
+            while ($sub && $sub->nodeType !== XML_ELEMENT_NODE) {
+                $sub = $sub->nextSibling;
+            }
+            if (!$sub) continue;
+
+            $score = 0;
+            $scoreSpan = $xpath->query('.//span[@class="score"]', $sub)->item(0);
+            if ($scoreSpan) {
+                $score = (int)filter_var($scoreSpan->nodeValue, FILTER_SANITIZE_NUMBER_INT);
+            }
+
+            // Extract username from the subtext
+            $username = '';
+            $userAnchor = $xpath->query('.//a[@class="hnuser"]', $sub)->item(0);
+            if ($userAnchor) {
+                $username = $userAnchor->nodeValue;
+            }
+
+            // age -> get title attr for absolute time if available
+            $ageSpan = $xpath->query('.//span[@class="age"]', $sub)->item(0);
+            $timestamp = 0;
+            if ($ageSpan) {
+                $titleAttr = $ageSpan->getAttribute('title');
+                if ($titleAttr) {
+                    // HN title format: "2025-06-19T10:22:06 1750328526" (ISO date + space + unix timestamp)
+                    if (preg_match('/(\d{10,})$/', $titleAttr, $matches)) {
+                        // Extract the Unix timestamp from the end
+                        $timestamp = (int)$matches[1];
+                    } else {
+                        // Fallback: try to parse the ISO date part
+                        $isoDate = preg_split('/\s+/', $titleAttr)[0];
+                        $timestamp = strtotime($isoDate);
+                    }
+                }
+            }
+
+            // comments link - improved parsing
+            $commentsUrl = '';
+            $commentsCount = 0;
+            
+            // Get all links with item?id= in the subtext
+            $allItemLinks = $xpath->query('.//a[contains(@href, "item?id=")]', $sub);
+            foreach ($allItemLinks as $link) {
+                $linkText = $link->nodeValue;
+                // Debug: show what we're finding
+                //echo "DEBUG: Found link text: '{$linkText}'\n";
+                
+                // Check if this link contains comment-related text
+                if (preg_match('/comment|discuss/i', $linkText)) {
+                    $commentsHref = $link->getAttribute('href');
+                    $commentsUrl = 'https://news.ycombinator.com/' . ltrim($commentsHref, '/');
+                    
+                    // Extract number from comment text (handle &nbsp; as space)
+                    $cleanText = str_replace(['&nbsp;', chr(160)], ' ', $linkText);
+                    if (preg_match('/(\d+)\s*comment/i', $cleanText, $m)) {
+                        $commentsCount = (int)$m[1];
+                        break;
+                    } elseif (preg_match('/(\d+)\s*discuss/i', $cleanText, $m)) {
+                        $commentsCount = (int)$m[1];
+                        break;
+                    } elseif (preg_match('/(\d+)/', $cleanText, $m)) {
+                        // Only use this if the text definitely looks like comments
+                        if (stripos($cleanText, 'comment') !== false || stripos($cleanText, 'discuss') !== false) {
+                            $commentsCount = (int)$m[1];
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // If we didn't find a comments link, use the generic item link
+            if (!$commentsUrl && $allItemLinks->length > 0) {
+                $firstLink = $allItemLinks->item(0);
+                $commentsHref = $firstLink->getAttribute('href');
+                $commentsUrl = 'https://news.ycombinator.com/' . ltrim($commentsHref, '/');
+            }
+
+            $stories[] = [
+                'id' => $id,
+                'title' => $title,
+                'url' => $url,
+                'domain' => $domain,
+                'comments_url' => $commentsUrl,
+                'descendants' => $commentsCount, // Use 'descendants' to match HN API format
+                'score' => $score,
+                'time' => $timestamp, // Use 'time' to match HN API format
+                'by' => $username, // Extract username from web scraping
+            ];
+        }
+
+        // "More" link
+        $nextPath = null;
+        $more = $xpath->query('//a[@class="morelink"]')->item(0);
+        if ($more) {
+            $nextPath = $more->getAttribute('href');
+        }
+
+        return [$stories, $nextPath];
+    }
+
     private function fetchStoryDetails(int $storyId): ?array
     {
-        $url = self::ITEM_URL . "/{$storyId}.json";
-        
+        logMessage("Fetching story details: {$storyId}");
+
+        $url = self::ITEM_URL . "/{$storyId}.json";        
         $response = fetchUrl($url);
         if ($response === false) {
             echo "Error fetching story {$storyId}\n";
@@ -264,7 +434,7 @@ class HackerNewsFetcher
         }
     }
 
-    private function extractDomain(string $url): string
+    public static function extractDomain(string $url): string
     {
         if (empty($url)) {
             return "";
@@ -274,7 +444,186 @@ class HackerNewsFetcher
         return $parsedUrl['host'] ?? "";
     }
 
+    /**
+     * Static version of extractImageUrl for use in static contexts
+     */
+    public static function extractImageUrlStatic(string $url): ?string
+    {
+        if (empty($url)) {
+            return null;
+        }
+
+        try {
+            $parsedUrl = parse_url($url);
+            $path = strtolower($parsedUrl['path'] ?? '');
+
+            // Skip common non-HTML file types
+            $skipExtensions = [
+                '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+                '.txt', '.rtf', '.csv', '.zip', '.rar', '.tar', '.gz',
+                '.mp3', '.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv',
+                '.exe', '.dmg', '.iso', '.img', '.bin', '.dat'
+            ];
+
+            foreach ($skipExtensions as $ext) {
+                if (str_ends_with($path, $ext)) {
+                    return null;
+                }
+            }
+
+            $html = fetchUrl($url, 10);
+            if ($html === false) {
+                return null;
+            }
+
+            return self::extractImageFromPageWithHtmlStatic($url, $html);
+
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Static version of extractImageFromPageWithHtml
+     */
+    public static function extractImageFromPageWithHtmlStatic(string $url, string $html): ?string
+    {
+        try {
+            $dom = new \DOMDocument();
+            @$dom->loadHTML($html);
+            $xpath = new \DOMXPath($dom);
+
+            $parsedUrl = parse_url($url);
+            $baseUrl = $parsedUrl['scheme'] . '://' . $parsedUrl['host'];
+
+            // Try Open Graph image
+            $ogImage = $xpath->query('//meta[@property="og:image"]/@content');
+            if ($ogImage->length > 0) {
+                $imgUrl = $ogImage->item(0)->nodeValue;
+                if (!str_starts_with($imgUrl, 'http')) {
+                    $imgUrl = $baseUrl . '/' . ltrim($imgUrl, '/');
+                }
+                return $imgUrl;
+            }
+
+            // Try Twitter card image
+            $twitterImage = $xpath->query('//meta[@name="twitter:image"]/@content');
+            if ($twitterImage->length > 0) {
+                $imgUrl = $twitterImage->item(0)->nodeValue;
+                if (!str_starts_with($imgUrl, 'http')) {
+                    $imgUrl = $baseUrl . '/' . ltrim($imgUrl, '/');
+                }
+                return $imgUrl;
+            }
+
+            // Look for large images in content
+            $images = $xpath->query('//img[@src]');
+            foreach ($images as $img) {
+                if (!($img instanceof \DOMElement)) continue;
+                
+                $src = $img->getAttribute('src');
+                if (empty($src)) continue;
+
+                // Skip icons, logos, avatars, etc.
+                $skipTerms = ['icon', 'logo', 'avatar', 'favicon', 'spinner', 'button'];
+                $skip = false;
+                foreach ($skipTerms as $term) {
+                    if (str_contains(strtolower($src), $term)) {
+                        $skip = true;
+                        break;
+                    }
+                }
+                if ($skip) continue;
+
+                // Make relative URLs absolute
+                if (!str_starts_with($src, 'http')) {
+                    $src = $baseUrl . '/' . ltrim($src, '/');
+                }
+
+                // Check dimensions if available
+                $width = $img->getAttribute('width');
+                $height = $img->getAttribute('height');
+
+                if ($width && $height && (int)$width >= 300 && (int)$height >= 300) {
+                    return $src;
+                }
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Static version of saveStoryImage
+     */
+    public static function saveStoryImageStatic(int $storyId, ?string $imageUrl, string $imgDir): void
+    {
+        // Check if image already exists with any extension
+        $extensions = ['.jpg', '.png', '.gif', '.webp'];
+        foreach ($extensions as $ext) {
+            $filepath = $imgDir . "/{$storyId}{$ext}";
+            if (file_exists($filepath)) {
+                return; // Silently skip if image already exists
+            }
+        }
+
+        // If no URL or invalid URL, don't save anything
+        if (!$imageUrl || !str_starts_with($imageUrl, 'http')) {
+            return;
+        }
+
+        try {
+            // First check if the URL is actually an image
+            $headers = fetchUrl($imageUrl, 10, [], true);
+            $contentType = '';
+            if ($headers && isset($headers['Content-Type'])) {
+                $contentType = is_array($headers['Content-Type']) 
+                    ? end($headers['Content-Type']) 
+                    : $headers['Content-Type'];
+            }
+
+            // If it's not an image, try to extract an image from the page
+            if (!str_starts_with($contentType, 'image/')) {
+                $imageUrl = self::extractImageUrlStatic($imageUrl);
+                if (!$imageUrl) {
+                    return;
+                }
+            }
+
+            // Determine file extension (default .jpg)
+            $ext = '.jpg';
+            if (str_contains($contentType, 'png')) {
+                $ext = '.png';
+            } elseif (str_contains($contentType, 'gif')) {
+                $ext = '.gif';
+            } elseif (str_contains($contentType, 'webp')) {
+                $ext = '.webp';
+            }
+
+            $filepath = $imgDir . "/{$storyId}{$ext}";
+
+            // Stream download directly to disk to avoid high memory usage
+            $success = downloadUrlToFile($imageUrl, $filepath, 10);
+            if ($success) {
+                logMessage("Successfully downloaded image for story {$storyId}");
+            }
+
+        } catch (\Exception $e) {
+            logMessage("Error downloading image for story {$storyId}: " . $e->getMessage());
+        }
+    }
+
     private function storeStory(array $story, int $storyTypeId, int $ranking): void
+    {
+        self::storeStoryWithDependencies($story, $storyTypeId, $ranking, $this->pdo, $this->imgDir);
+    }
+
+    /**
+     * Public static method to store a story with all dependencies passed as parameters
+     */
+    public static function storeStoryWithDependencies(array $story, int $storyTypeId, int $ranking, \PDO $pdo, string $imgDir): void
     {
         if (empty($story)) {
             return;
@@ -284,8 +633,8 @@ class HackerNewsFetcher
         $storyId = $story['id'] ?? 0;
         $title = $story['title'] ?? '';
         $url = $story['url'] ?? '';
-        $domain = $this->extractDomain($url);
-        $commentsUrl = "https://news.ycombinator.com/item?id={$storyId}";
+        $domain = self::extractDomain($url);
+        $commentsUrl = $story['comments_url'] ?? "https://news.ycombinator.com/item?id={$storyId}";
         $commentsCount = $story['descendants'] ?? 0;
         $score = $story['score'] ?? 0;
         $user = $story['by'] ?? '';
@@ -296,7 +645,7 @@ class HackerNewsFetcher
         $imageExists = false;
         $extensions = ['.jpg', '.png', '.gif', '.webp'];
         foreach ($extensions as $ext) {
-            if (file_exists($this->imgDir . "/{$storyId}{$ext}")) {
+            if (file_exists($imgDir . "/{$storyId}{$ext}")) {
                 $imageExists = true;
                 break;
             }
@@ -305,24 +654,20 @@ class HackerNewsFetcher
         // Only try to fetch image if it doesn't exist
         if (!$imageExists && !empty($url)) {
             try {
-                $imageUrl = $this->extractImageUrl($url);
-                $this->saveStoryImage($storyId, $imageUrl);
+                $imageUrl = self::extractImageUrlStatic($url);
+                self::saveStoryImageStatic($storyId, $imageUrl, $imgDir);
             } catch (\Exception $e) {
-                echo "Error processing image for story {$storyId}: " . $e->getMessage() . "\n";
-                $this->saveStoryImage($storyId, null);
+                logMessage("Error processing image for story {$storyId}: " . $e->getMessage());
             }
-        } elseif (!$imageExists) {
-            $this->saveStoryImage($storyId, null);
         }
 
         // Check if story already exists in the database
-        // TODO: We can do the fetch and store in one go
-        $stmt = $this->pdo->prepare('SELECT id FROM stories WHERE id = ?');
+        $stmt = $pdo->prepare('SELECT id FROM stories WHERE id = ?');
         $stmt->execute([$storyId]);
         $existing = $stmt->fetch();
         if ($existing) {
             // Update existing story
-            $stmt = $this->pdo->prepare('
+            $stmt = $pdo->prepare('
                 UPDATE stories
                 SET title = ?, url = ?, domain = ?, comments_url = ?,
                     comments_count = ?, score = ?, user = ?,
@@ -335,7 +680,7 @@ class HackerNewsFetcher
             ]);
         } else {
             // Insert new story
-            $stmt = $this->pdo->prepare('
+            $stmt = $pdo->prepare('
                 INSERT INTO stories
                 (id, title, url, domain, comments_url, comments_count, 
                  score, user, timestamp, fetched_at)
@@ -348,14 +693,13 @@ class HackerNewsFetcher
         }
 
         // Handle ranking data separately
-        // Check if rank entry already exists
-        $stmt = $this->pdo->prepare('SELECT id FROM ranks WHERE id = ? AND type = ?');
+        $stmt = $pdo->prepare('SELECT id FROM ranks WHERE id = ? AND type = ?');
         $stmt->execute([$storyId, $storyTypeId]);
         $existingRank = $stmt->fetch();
 
         if ($existingRank) {
             // Update existing rank
-            $stmt = $this->pdo->prepare('
+            $stmt = $pdo->prepare('
                 UPDATE ranks
                 SET rank = ?
                 WHERE id = ? AND type = ?
@@ -363,7 +707,7 @@ class HackerNewsFetcher
             $stmt->execute([$ranking, $storyId, $storyTypeId]);
         } else {
             // Insert new rank
-            $stmt = $this->pdo->prepare('
+            $stmt = $pdo->prepare('
                 INSERT INTO ranks (id, type, rank)
                 VALUES (?, ?, ?)
             ');
@@ -374,6 +718,11 @@ class HackerNewsFetcher
     public function fetchAndStore(string $storyType = "top", int $limit = 100): int
     {
         logMessage("Fetching {$storyType} stories...");
+        
+        if ($storyType === 'active') {
+            return $this->fetchAndStoreActiveStories($limit);
+        }
+
         $storyIds = $this->fetchStoryIds($storyType);
 
         if (empty($storyIds)) {
@@ -429,10 +778,69 @@ class HackerNewsFetcher
         }
     }
 
+    /**
+     * Fetch and store active stories using the specialized active scraping logic
+     */
+    private function fetchAndStoreActiveStories(int $limit = 200): int
+    {
+        $pagePath = 'active';
+        $processed = 0;
+        $seenIds = [];
+        $ranking = 0;
+        $typeId = STORY_TYPES['active'];
+
+        try {
+            $this->pdo->beginTransaction();
+
+            // bump existing ranks down so we can insert new ones at top
+            $this->pdo->prepare('UPDATE ranks SET rank = rank + ? WHERE type = ?')
+                ->execute([$limit, $typeId]);
+
+            while ($pagePath && $processed < $limit) {
+                $html = fetchUrl('https://news.ycombinator.com/' . $pagePath);
+                if ($html === false) {
+                    logMessage('Failed to fetch ' . $pagePath);
+                    break;
+                }
+
+                [$stories, $nextPath] = $this->parseActivePage($html);
+                foreach ($stories as $story) {
+                    if ($processed >= $limit) break;
+                    if (isset($seenIds[$story['id']])) continue; // skip duplicates across pages
+                    $seenIds[$story['id']] = true;
+
+                    logMessage("Fetching: {$story['id']}: {$story['title']}");
+                    $this->storeStory($story, $typeId, $ranking);
+                    $ranking++;
+                    $processed++;
+
+                    if ($processed % 20 === 0) {
+                        logMessage("Processed {$processed} active stories");
+                    }
+
+                    usleep(100000); // 0.1s polite delay
+                }
+
+                $pagePath = $nextPath;
+            }
+
+            $this->pdo->commit();
+            logMessage("Completed fetching {$processed} active stories");
+        } catch (\Exception $e) {
+            $this->pdo->rollBack();
+            logMessage('Error: ' . $e->getMessage());
+            throw $e;
+        }
+
+        return $processed;
+    }
+
     public function fetchAll(int $limit = 100): int
     {
         $total = 0;
-        foreach (array_keys(self::ENDPOINTS) as $storyType) {
+        $allTypes = array_merge(array_keys(self::ENDPOINTS), ['active']);
+        
+        foreach ($allTypes as $storyType) {
             $count = $this->fetchAndStore($storyType, $limit);
             $total += $count;
         }
@@ -563,8 +971,8 @@ if (!function_exists('array_any')) {
     }
 }
 
-// Command line interface
-if (php_sapi_name() === 'cli') {
+// Command line interface - only run when this file is executed directly
+if (php_sapi_name() === 'cli' && realpath(__FILE__) === realpath($_SERVER['SCRIPT_FILENAME'])) {
     // Define valid options
     $options = getopt('h', ['type:', 'limit:', 'db:', 'id:', 'help']);
     
@@ -575,9 +983,9 @@ if (php_sapi_name() === 'cli') {
     }
     
     if (isset($options['help'])) {
-        echo "Usage: php fetch.php [options]\n";
+        echo "Usage: php fetcher.php [options]\n";
         echo "Options:\n";
-        echo "  --type=TYPE     Type of stories to fetch: top, new, best, all (default: all)\n";
+        echo "  --type=TYPE     Type of stories to fetch: top, new, best, active, all (default: all)\n";
         echo "  --limit=LIMIT   Maximum number of stories to fetch per type (default: 100)\n";
         echo "  --db=PATH       Path to SQLite database (default: stories.db)\n";
         echo "  --id=STORY-ID   Fetch a single story by ID\n";
@@ -590,7 +998,7 @@ if (php_sapi_name() === 'cli') {
     $db = $options['db'] ?? DB_PATH;
     $storyId = isset($options['id']) ? (int)$options['id'] : null;
     
-    $validTypes = ['top', 'new', 'best', 'all'];
+    $validTypes = ['top', 'new', 'best', 'active', 'all'];
     if (!in_array($type, $validTypes)) {
         echo "Error: Invalid type '{$type}'. Valid types are: " . implode(', ', $validTypes) . "\n";
         exit(1);

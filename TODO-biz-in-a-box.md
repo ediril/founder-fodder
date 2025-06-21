@@ -1,1 +1,0 @@
-List of things to do, evaluate where you are, suggest what to do
