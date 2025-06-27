@@ -1,7 +1,8 @@
 
 - Add a sitemap.xml
+    - Summarizer: create/update sitemap.xml
 
-- Summarizer: create/update sitemap.xml
+- There is no story screenshot attached to story endpoints
 
 - Extract mentioned links in the comments and put them in the summaries
 
