@@ -126,14 +126,14 @@ class HackerNewsFetcher
             // title & url - modern HN structure uses titleline span
             $titleAnchor = $xpath->query('.//span[@class="titleline"]/a', $athing)->item(0);
             if (!$titleAnchor) continue;
-            $title = $titleAnchor->nodeValue;
+            $title = html_entity_decode($titleAnchor->nodeValue, ENT_QUOTES | ENT_HTML5, 'UTF-8');
             $url = $titleAnchor->getAttribute('href');
 
             // domain
             $domain = '';
             $domainSpan = $xpath->query('.//span[@class="sitestr"]', $athing)->item(0);
             if ($domainSpan) {
-                $domain = $domainSpan->nodeValue;
+                $domain = html_entity_decode($domainSpan->nodeValue, ENT_QUOTES | ENT_HTML5, 'UTF-8');
             }
 
             // subtext row is the next element row
@@ -153,7 +153,7 @@ class HackerNewsFetcher
             $username = '';
             $userAnchor = $xpath->query('.//a[@class="hnuser"]', $sub)->item(0);
             if ($userAnchor) {
-                $username = $userAnchor->nodeValue;
+                $username = html_entity_decode($userAnchor->nodeValue, ENT_QUOTES | ENT_HTML5, 'UTF-8');
             }
 
             // age -> get title attr for absolute time if available
