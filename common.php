@@ -5,8 +5,8 @@ const MAX_FETCH = 200;                  // 20 pages worth
 const MAX_SUMMARIZE = 30;               // 3 pages worth
 const MIN_STORY_LENGTH_FOR_SUMMARY = 200;
 
-const FETCHER_VERSION = "0.0627.001";
-const SUMMARIZER_VERSION = "0.0627.001";
+const FETCHER_VERSION = "0.0627.002";
+const SUMMARIZER_VERSION = "0.0627.002";
 
 const FETCHER_LOCK_FILE_NAME = 'ff_fetch.lock';
 const SUMMARIZER_LOCK_FILE_NAME = 'ff_summarize.lock';
@@ -226,4 +226,24 @@ function downloadUrlToFile(string $url, string $destPath, int $timeout = 15, arr
     }
 
     return $success;
+}
+
+/**
+ * Create a DOMDocument configured for proper UTF-8 HTML parsing
+ * This prevents encoding issues when parsing HTML content
+ */
+function createUtf8DOMDocument(string $html): DOMDocument
+{
+    // Properly handle UTF-8 encoding by adding UTF-8 BOM and meta tag
+    $html = "\xEF\xBB\xBF" . '<meta charset="UTF-8">' . $html;
+    
+    $dom = new DOMDocument('1.0', 'UTF-8');
+    $dom->encoding = 'UTF-8';
+    
+    // Suppress warnings for malformed HTML
+    libxml_use_internal_errors(true);
+    @$dom->loadHTML($html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+    libxml_clear_errors();
+    
+    return $dom;
 }

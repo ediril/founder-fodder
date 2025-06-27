@@ -120,12 +120,8 @@ class StorySummarizer {
                 return "Failed to fetch content from URL.";
             }
             
-            // Parse the content with DOMDocument
-            $dom = new DOMDocument();
-            // Suppress warnings for malformed HTML
-            libxml_use_internal_errors(true);
-            $dom->loadHTML($content);
-            libxml_clear_errors();
+            // Parse the content with DOMDocument with proper UTF-8 handling
+            $dom = createUtf8DOMDocument($content);
             
             // Remove script and style elements
             $scripts = $dom->getElementsByTagName('script');

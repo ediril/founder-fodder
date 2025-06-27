@@ -112,8 +112,7 @@ class HackerNewsFetcher
      */
     private function parseActivePage(string $html): array
     {
-        $dom = new \DOMDocument();
-        @$dom->loadHTML($html);
+        $dom = createUtf8DOMDocument($html);
         $xpath = new \DOMXPath($dom);
 
         $stories = [];
@@ -331,8 +330,7 @@ class HackerNewsFetcher
     private function extractImageFromPageWithHtml(string $url, string $html): ?string
     {
         try {
-            $dom = new \DOMDocument();
-            @$dom->loadHTML($html);
+            $dom = createUtf8DOMDocument($html);
             $xpath = new \DOMXPath($dom);
 
             $parsedUrl = parse_url($url);
@@ -444,6 +442,7 @@ class HackerNewsFetcher
         return $parsedUrl['host'] ?? "";
     }
 
+
     /**
      * Static version of extractImageUrl for use in static contexts
      */
@@ -489,8 +488,7 @@ class HackerNewsFetcher
     public static function extractImageFromPageWithHtmlStatic(string $url, string $html): ?string
     {
         try {
-            $dom = new \DOMDocument();
-            @$dom->loadHTML($html);
+            $dom = createUtf8DOMDocument($html);
             $xpath = new \DOMXPath($dom);
 
             $parsedUrl = parse_url($url);
