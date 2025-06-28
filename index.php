@@ -297,6 +297,17 @@ if ($path === '/' || $path === '/index.php') {
     // Handle privacy policy page
     include 'templates/privacy.php';
 
+} elseif ($path === '/favicon.ico') {
+    // Handle favicon requests
+    $file = 'favicon.ico';
+    if (file_exists($file)) {
+        header('Content-Type: image/x-icon');
+        header('Cache-Control: public, max-age=31536000'); // 1 year
+        readfile($file);
+    } else {
+        http_response_code(404);
+        echo '404 Not Found';
+    }
 } elseif (strpos($path, '/static/') === 0) {
     // Serve static files
     $file = ltrim($path, '/');
@@ -336,6 +347,9 @@ if ($path === '/' || $path === '/index.php') {
                 break;
             case 'webp':
                 header('Content-Type: image/webp');
+                break;
+            case 'svg':
+                header('Content-Type: image/svg+xml');
                 break;
         }
         

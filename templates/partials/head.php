@@ -41,8 +41,12 @@
     
     <!-- Additional Meta Tags -->
     <meta name="robots" content="index, follow">
-    <meta name="theme-color" content="#00d1b2">
+    <meta name="theme-color" content="#d84800">
     <link rel="canonical" href="<?php echo htmlspecialchars($og_url ?? (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']); ?>">
+    
+    <!-- Favicon -->
+    <link rel="icon" href="/favicon.ico" sizes="32x32">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon.ico">
     
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
