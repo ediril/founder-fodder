@@ -1,9 +1,16 @@
 RewriteEngine On
 
-# Only forbid when not on the matching subdomain
-RewriteCond %{HTTP_HOST} !^(www\.)?founderfodder\.com$ [NC]
-RewriteRule ^ - [R=404,L]
+# Force HTTPS redirect
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
+# Redirect www to non-www
+RewriteCond %{HTTP_HOST} ^www\.founderfodder\.com$ [NC]
+RewriteRule ^(.*)$ https://founderfodder.com/$1 [L,R=301]
+
+# Only allow founderfodder.com (non-www)
+RewriteCond %{HTTP_HOST} !^founderfodder\.com$ [NC]
+RewriteRule ^ - [R=404,L]
 
 # If the requested file or directory exists, serve it directly
 RewriteCond %{REQUEST_FILENAME} !-f
