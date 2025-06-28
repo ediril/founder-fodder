@@ -11,7 +11,7 @@ $story_type_descriptions = [
 ];
 
 $page_description = $story_type_descriptions[$story_type] ?? 'Inspiration for Founders, Makers and Tinkerers. Curated stories from Hacker News for entrepreneurs and builders.';
-$og_title = "Founder Fodder - " . ucfirst($story_type) . " Stories";
+$og_title = "FounderFodder - " . ucfirst($story_type) . " Stories";
 $og_description = $page_description;
 
 include __DIR__ . '/partials/head.php'; 
