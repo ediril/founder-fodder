@@ -6,6 +6,46 @@ require_once __DIR__ . '/../vendor/autoload.php';
 error_reporting(E_ALL & ~E_DEPRECATED);
 
 $page_title = 'Summary - ' . $story['title'];
+
+// Set Open Graph data for story summary
+$og_title = $story['title'] . ' - Summary | Founder Fodder';
+$og_type = 'article';
+
+// Generate description from summary content
+$og_description = 'Read summary and key insights from this story';
+if ($has_story_summary && !empty($story_summary)) {
+    // Extract first paragraph from markdown summary for description
+    $lines = explode("\n", $story_summary);
+    $first_paragraph = '';
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if (!empty($line) && !str_starts_with($line, '#') && !str_starts_with($line, '##')) {
+            $first_paragraph = $line;
+            break;
+        }
+    }
+    if (!empty($first_paragraph)) {
+        // Clean up markdown and truncate
+        $first_paragraph = preg_replace('/\[(.*?)\]\((.*?)\)/', '$1', $first_paragraph); // remove markdown links
+        $first_paragraph = preg_replace('/[*_`#>-]/', '', $first_paragraph); // remove markdown formatting
+        $og_description = strlen($first_paragraph) > 160 ? substr($first_paragraph, 0, 157) . '...' : $first_paragraph;
+    }
+}
+
+// Check if story has an image for Open Graph
+$og_image = '';
+$og_image_alt = '';
+$image_extensions = ['jpg', 'png', 'webp'];
+foreach ($image_extensions as $ext) {
+    $img_path = __DIR__ . "/../static/img/stories/{$story['id']}.{$ext}";
+    if (file_exists($img_path)) {
+        $og_image = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . 
+                   '://' . $_SERVER['HTTP_HOST'] . getBasePath() . "/static/img/stories/{$story['id']}.{$ext}";
+        $og_image_alt = $story['title'];
+        break;
+    }
+}
+
 $additional_css = ['https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown.css'];
 include __DIR__ . '/partials/head.php'; 
 ?>

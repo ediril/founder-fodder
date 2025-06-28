@@ -1,5 +1,19 @@
 <?php 
 $page_title = 'Founder Fodder';
+
+// Set dynamic description based on story type
+$story_type = $stories['type'] ?? 'active';
+$story_type_descriptions = [
+    'active' => 'Currently trending stories for founders and entrepreneurs',
+    'new' => 'Latest tech news and startup stories for founders and makers', 
+    'top' => 'Top-rated stories for entrepreneurs and technology enthusiasts',
+    'best' => 'Best-rated stories for entrepreneurs and technology enthusiasts'
+];
+
+$page_description = $story_type_descriptions[$story_type] ?? 'Inspiration for Founders, Makers and Tinkerers. Curated stories from Hacker News for entrepreneurs and builders.';
+$og_title = "Founder Fodder - " . ucfirst($story_type) . " Stories";
+$og_description = $page_description;
+
 include __DIR__ . '/partials/head.php'; 
 ?>
     <section class="hero is-small">
