@@ -1,0 +1,24 @@
+# LLM Usage Guidelines
+
+## About This Site
+This site appears to be "Founder Fodder" - a platform for startup and entrepreneurship content.
+
+## Permitted Uses
+- You may reference and discuss the content found on this site
+- You may summarize articles and information for educational purposes
+- You may use publicly available content to answer questions about startups and entrepreneurship
+
+## Restrictions
+- Do not reproduce entire articles verbatim without attribution
+- Do not access or attempt to access private or sensitive data
+- Respect any copyright notices and terms of service
+- Do not attempt to scrape private user data or database contents
+
+## Contact
+For questions about AI usage of this site's content, please contact the site administrators.
+
+## Last Updated
+Created: December 2024
+
+---
+This file follows the emerging llm.txt standard for providing guidance to AI language models. 

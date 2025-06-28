@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Block access to sensitive directories and files
+Disallow: /vendor/
+Disallow: /_originals/
+
+# Allow access to static assets
+Allow: /static/
+
+# Sitemap (add this when you have one)
+# Sitemap: https://yoursite.com/sitemap.xml 
