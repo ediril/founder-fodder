@@ -2,15 +2,14 @@
 - Add a sitemap.xml
     - Summarizer: create/update sitemap.xml
 
-- There is no story screenshot attached to story endpoints
-
 - Extract mentioned links in the comments and put them in the summaries
 
 - Make a podcast from the summaries?
 
-- Put estimates of "x min read" both on the story cards and comments
-
 - If there is an archive link in the first comment (e.g. https://archive.ph/P2cU1), use it to download the story content (otherwise you will get 403 from the original story url)
+    - https://news.ycombinator.com/item?id=44396977
+
+- Put estimates of "x min read" both on the story cards and comments
 
 - Check if comments are getting updated every 6 hours within 24 hours
 

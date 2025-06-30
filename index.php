@@ -247,13 +247,15 @@ if ($path === '/' || $path === '/index.php') {
     // Get story details from database
     $db = new SQLite3(DB_PATH);
     $story = $db->querySingle("SELECT * FROM stories WHERE id = " . intval($story_id), true);
-    $story['time_ago'] = format_time_ago((int)$story['timestamp']);
 
-    if (!$story) {
+    // Bulletproof validation: ensure we have a valid story array with required fields
+    if (!$story || !is_array($story) || !isset($story['id'], $story['title'], $story['timestamp'])) {
         http_response_code(404);
         echo "Story not found";
         exit;
     }
+    
+    $story['time_ago'] = format_time_ago((int)$story['timestamp']);
     
     // Check if summary files exist
     $story_summary_file = "static/content/{$story_id}-story-summary.md";
