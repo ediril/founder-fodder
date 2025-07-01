@@ -518,6 +518,22 @@ class StorySummarizer {
             $result = $this->model->generateContent($prompt);
             return $result->text();
 
+        } catch (ValueError $e) {
+            // Check if this is the specific quota/candidate issue
+            if (strpos($e->getMessage(), 'quick accessor only works for a single candidate') !== false) {
+                echo "ERROR: Gemini API quota exhausted or no candidates returned.\n";
+                echo "Message: " . $e->getMessage() . "\n";
+                echo "This indicates API quota limits have been reached.\n";
+                echo "Exiting gracefully to avoid further quota usage.\n";
+                
+                // Release resources and exit gracefully
+                $this->releaseResources();
+                exit(1);
+            }
+            
+            // Re-throw if it's a different ValueError
+            throw $e;
+            
         } catch (Exception $e) {
             echo "ERROR during summarization: " . $e->getMessage() . "\n";
             return null;
