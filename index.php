@@ -291,20 +291,19 @@ if ($path === '/' || $path === '/index.php') {
         $comments_summary_last_updated = format_time_ago(filectime($comments_summary_file));
     }
     
-    // Include the summary template
     include 'templates/summary.php';
 
 } elseif ($path === '/about') {
-    // Handle about page
     include 'templates/about.php';
 
 } elseif ($path === '/legal') {
-    // Handle terms of service page
     include 'templates/legal.php';
 
 } elseif ($path === '/privacy') {
-    // Handle privacy policy page
     include 'templates/privacy.php';
+
+} elseif ($path === '/blog') {
+    include 'templates/blog.php';
 
 } elseif ($path === '/favicon.ico') {
     // Handle favicon requests

@@ -4,19 +4,19 @@ $page_title = 'Founder Fodder';
 // Set dynamic description based on active tab
 $active_tab = $active_tab ?? 'news';
 $tab_descriptions = [
-    'news' => 'Inspiration for Founders, Makers and Tinkerers. Curated stories from Hacker News for entrepreneurs and builders.',
-    'ventures' => 'Venture capital and startup funding news - Coming soon!',
-    'tools' => 'Tools and resources for founders and makers - Coming soon!'
+    'news' => 'Curated stories for Founders, Makers and Tinkerers.',
+    'ventures' => 'Curated SaaS companies - Coming soon!',
+    'tools' => 'Curated tools and resources for Founders, Makers and Tinkerers - Coming soon!'
 ];
 
 // Set dynamic description based on story type for news tab
 if ($active_tab === 'news' && isset($stories['type'])) {
     $story_type = $stories['type'];
     $story_type_descriptions = [
-        'active' => 'Trending stories for founders and entrepreneurs',
-        'new' => 'Latest tech news and startup stories for founders and makers', 
-        'top' => 'Top-rated stories for entrepreneurs and technology enthusiasts',
-        'best' => 'Best-rated stories for entrepreneurs and technology enthusiasts'
+        'active' => 'Trending stories for Founders, Makers and Tinkerers',
+        'new' => 'Latest tech news and startup stories for Founders, Makers and Tinkerers', 
+        'top' => 'Top-rated stories for Founders, Makers and Tinkerers',
+        'best' => 'Best-rated stories for Founders, Makers and Tinkerers'
     ];
     $page_description = $story_type_descriptions[$story_type] ?? $tab_descriptions['news'];
     $og_title = "FounderFodder - " . ucfirst($story_type) . " Stories";
