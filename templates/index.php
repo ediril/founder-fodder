@@ -61,15 +61,13 @@ include __DIR__ . '/partials/hero.php';
                         </div>
                         <div class="story-content">
                             <p class="title is-5 mb-3">
-                                <a href="<?php echo htmlspecialchars($story['url']); ?>">
+                                <a href="<?php echo htmlspecialchars(!empty($story['url']) ? $story['url'] : $story['comments_url']); ?>">
                                     <?php echo htmlspecialchars($story['title']); ?>
                                 </a>
-                                <span class="has-text-grey is-size-6">(<?php echo htmlspecialchars($story['domain']); ?>)</span>
+                                <span class="has-text-grey is-size-6">(<?php echo htmlspecialchars(!empty($story['domain']) ? $story['domain'] : 'news.ycombinator.com'); ?>)</span>
                             </p>
                             <p class="subtitle is-6 pt-3 mb-3">
                                 <span class="mr-3"><i class="fa-solid fa-clock"></i> <?php echo htmlspecialchars($story['time_ago']); ?></span>
-                                <span class="mr-3"><i class="fa-solid fa-arrow-up"></i> <?php echo (int)$story['score']; ?></span>
-                                <span class="mr-3"><i class="fa-solid fa-comment"></i> <?php echo (int)$story['comments_count']; ?></span>
                             </p>
                             <?php
                             $summary_files = $story['summary_files'] ?? ['has_story_summary' => false];

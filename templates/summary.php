@@ -62,8 +62,6 @@ include __DIR__ . '/partials/head.php';
                 <div class="subtitle is-6 pt-1 mb-2">
                     <span><i class="fa-solid fa-clock"></i> <?php echo htmlspecialchars($story['time_ago']); ?></span>
                     <span><i class="fas fa-globe pl-2"></i> <?php echo htmlspecialchars($story['domain']); ?></span>
-                    <span><i class="fa-solid fa-arrow-up pl-2"></i> <?php echo (int)$story['score']; ?></span>
-                    <span><i class="fa-solid fa-comment pl-2"></i> <?php echo (int)$story['comments_count']; ?></span>
                 </div>
             </div>
         </div>
