@@ -713,12 +713,15 @@ class HackerNewsFetcher
         }
     }
 
-    public function fetchAndStore(string $storyType = "top", int $limit = 100): int
+    public function fetchAndStore(string $storyType, int $limit): int
     {
         logMessage("Fetching {$storyType} stories...");
         
         if ($storyType === 'active') {
             return $this->fetchAndStoreActiveStories($limit);
+        } else {
+            $limit = min($limit, 50);
+            logMessage("Limiting {$storyType} stories to {$limit}");
         }
 
         $storyIds = $this->fetchStoryIds($storyType);
@@ -751,6 +754,12 @@ class HackerNewsFetcher
             foreach ($storyIds as $ranking => $storyId) {
                 $story = $this->fetchStoryDetails($storyId);
                 if ($story) {
+                    // Skip "new" stories with less than 2 comments
+                    if ($storyType === 'new' && ($story['descendants'] ?? 0) < 2) {
+                        logMessage("Skipping story {$storyId} (new story with < 2 comments)");
+                        continue;
+                    }
+                    
                     $this->storeStory($story, $typeId, $ranking);
                     $count++;
 
@@ -779,7 +788,7 @@ class HackerNewsFetcher
     /**
      * Fetch and store active stories using the specialized active scraping logic
      */
-    private function fetchAndStoreActiveStories(int $limit = 200): int
+    private function fetchAndStoreActiveStories(int $limit): int
     {
         $pagePath = 'active';
         $processed = 0;
@@ -991,7 +1000,7 @@ if (php_sapi_name() === 'cli' && realpath(__FILE__) === realpath($_SERVER['SCRIP
         exit(0);
     }
     
-    $type = $options['type'] ?? 'all';
+    $type = $options['type'] ?? 'active';
     $limit = (int)($options['limit'] ?? MAX_FETCH);
     $db = $options['db'] ?? DB_PATH;
     $storyId = isset($options['id']) ? (int)$options['id'] : null;
