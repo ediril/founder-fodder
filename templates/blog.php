@@ -13,14 +13,15 @@ include __DIR__ . '/partials/hero.php';
                     I had the idea for this site for quite some time but never got around to it even though I read Hacker News
                     regularly. That is, until vibe coding became a thing and I thought it is the perfect well-defined mini-project.
                     </p><p>
-                    It took a day or so to complete the basic version that fetches new, top and best stories. I used it that night
-                    when I went to bed and remembered dark mode is a must! Then it was another day or so to add summarization and 
-                    the cron job to run fetching and summarizing periodically. I did run into several small bugs that spent less than an 
+                    I got started a couple of months ago, late on a Friday night. 
+                    It didn't take long at all to get the very basic version running that fetches new, top and best stories from hacker news API. 
+                    I used it when I went to bed and remembered dark mode is a must! Then it was another day or so to add summarization and 
+                    the cron job to run fetching and summarizing periodically on the web server. I did run into several small bugs that I spent less than an 
                     hour a day crushing over the next few days.
                     </p><p>
-                    Using the site some more, I realized I really like HN's active stories the most. That's where I've been getting most 
-                    of my news for the past several decades. Sadly, there is no active story feed in the hacker news API for some reason. 
-                    So we had to vibe code a solution for that.
+                    Using the site some more, I realized I really like the active stories the most. That's where I've been getting most 
+                    of my news for the past several decades. Sadly, there is no active story feed in the hacker news API for some reason
+                    and I had left it out to keep it simple. So we had to vibe code a solution for that.
                     </p><p>
                     As I kept using and adding more to the site, it turned into a more serious project and I want to keep going. Clearly,
                     there is no future for the site if it's just a Hacker News mirror. I've been following several folks on X and I got
