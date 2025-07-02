@@ -216,28 +216,35 @@ function asset_url(string $path): string {
 
 // Handle requests
 if ($path === '/' || $path === '/index.php') {
-    // Get stories for the main page
-    $story_type = $_GET['type'] ?? 'active';
-    $page = max(1, (int)($_GET['page'] ?? 1));
-    $per_page = STORIES_PER_PAGE; // Use the constant
+    // Get the active tab (news is default)
+    $active_tab = $_GET['tab'] ?? 'news';
     
-    // Get stories for current page
-    $stories = get_page_stories($story_type, $page, $per_page);
+    // Initialize variables
+    $stories = null;
+    $last_updated = null;
     
-    $db = new SQLite3(DB_PATH);
-    $type_id = STORY_TYPES[$story_type] ?? null;
-    if ($type_id) {
-        $result = $db->querySingle("
-            SELECT MAX(s.fetched_at) as max_ts 
-            FROM stories s 
-            INNER JOIN ranks r ON s.id = r.id 
-            WHERE r.type = " . intval($type_id), true);
-        $last_updated = $result['max_ts'];
-    } else {
-        $last_updated = null;
+    if ($active_tab === 'news') {
+        // Get stories for the main page
+        $story_type = $_GET['type'] ?? 'active';
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $per_page = STORIES_PER_PAGE; // Use the constant
+        
+        // Get stories for current page
+        $stories = get_page_stories($story_type, $page, $per_page);
+        
+        $db = new SQLite3(DB_PATH);
+        $type_id = STORY_TYPES[$story_type] ?? null;
+        if ($type_id) {
+            $result = $db->querySingle("
+                SELECT MAX(s.fetched_at) as max_ts 
+                FROM stories s 
+                INNER JOIN ranks r ON s.id = r.id 
+                WHERE r.type = " . intval($type_id), true);
+            $last_updated = $result['max_ts'];
+        }
     }
 
-    // Include the template with stories data
+    // Include the template with stories data and active tab
     include 'templates/index.php';
 
 } elseif (preg_match('/^\/summary\/(\d+)$/', $path, $matches)) {

@@ -54,6 +54,32 @@
   color: rgba(255, 255, 255, 0.6) !important;
 }
 
+/* Dark mode main tabs */
+[data-theme="dark"] .main-tabs .button,
+:root:not([data-theme="light"]) .main-tabs .button {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+[data-theme="dark"] .main-tabs .button:hover,
+:root:not([data-theme="light"]) .main-tabs .button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+[data-theme="dark"] .main-tabs .button.is-primary,
+:root:not([data-theme="light"]) .main-tabs .button.is-primary {
+  background: rgba(255, 255, 255, 0.9);
+  color: #d84800;
+}
+
+[data-theme="dark"] .main-tabs .button.is-primary:hover,
+:root:not([data-theme="light"]) .main-tabs .button.is-primary:hover {
+  background: white;
+  color: #d84800;
+}
+
 /* ================================
    BASE STYLES
    ================================ */
@@ -97,6 +123,32 @@ a:hover {
 
 .hero .subtitle {
   color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Main tabs styling in hero section */
+.main-tabs .button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.main-tabs .button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.main-tabs .button.is-primary {
+  background: rgba(255, 255, 255, 0.9);
+  color: #d84800;
+  border-color: rgba(255, 255, 255, 0.9);
+}
+
+.main-tabs .button.is-primary:hover {
+  background: white;
+  color: #d84800;
+  transform: translateY(-2px);
 }
 
 .summary-hero {
