@@ -121,6 +121,16 @@ a:hover {
   font-weight: 700;
 }
 
+.hero .title a {
+  color: white !important;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.hero .title a:hover {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
 .hero .subtitle {
   color: rgba(255, 255, 255, 0.9) !important;
 }
