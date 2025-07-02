@@ -1,20 +1,13 @@
 <?php 
 $page_title = 'Legal Notice - Founder Fodder';
 include __DIR__ . '/partials/head.php'; 
+include __DIR__ . '/partials/hero.php'; 
 ?>
-
-<section class="hero is-small">
-    <div class="hero-body">
-        <div class="container has-text-centered">
-            <h1 class="title is-2">Legal Notice</h1>
-        </div>
-    </div>
-</section>
-
 <section class="section">
     <div class="container">
         <div class="content is-medium">
             <div class="box">
+                <h1 class="title is-3">Legal Notice</h1>
                 <h2 class="title is-4">Short Version</h2>
                 <p>
                     This website provides educational information. You alone are 100% responsible for what you do or don't do with it.

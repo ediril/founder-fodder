@@ -1,26 +1,13 @@
 <?php 
 $page_title = 'About - Founder Fodder';
 include __DIR__ . '/partials/head.php'; 
+include __DIR__ . '/partials/hero.php'; 
 ?>
-
-<section class="hero is-small">
-    <div class="hero-body">
-        <div class="container has-text-centered">
-            <h1 class="title is-2">
-                <i class="fa-solid fa-fire"></i> Founder Fodder
-            </h1>
-            <p class="subtitle">
-                Inspiration for Founders, Makers and Tinkerers
-            </p>
-        </div>
-    </div>
-</section>
-
 <section class="section">
     <div class="container">
         <div class="content is-medium">
             <div class="box">
-                <h2 class="title is-4">About</h2>
+                <h1 class="title is-3">About</h1>
                 <p>
                     This site grew out of a personal need to stay informed about the latest in the startup 
                     community while not spending too much time scrolling through Hacker News.

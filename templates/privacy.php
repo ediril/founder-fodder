@@ -1,20 +1,14 @@
 <?php 
 $page_title = 'Privacy Statement - Founder Fodder';
 include __DIR__ . '/partials/head.php'; 
+include __DIR__ . '/partials/hero.php'; 
 ?>
-
-<section class="hero is-small">
-    <div class="hero-body">
-        <div class="container has-text-centered">
-            <h1 class="title is-2">Privacy Statement</h1>
-        </div>
-    </div>
-</section>
 
 <section class="section">
     <div class="container">
         <div class="content is-medium">
             <div class="box">
+                <h1 class="title is-3">Privacy Statement</h1>
                 <h2 class="title is-4">Short Version</h2>
                 <p>
                     This site keeps all your personal information secret. Your personal information is not shared with anyone else.
