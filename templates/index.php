@@ -9,17 +9,10 @@ $tab_descriptions = [
     'tools' => 'Curated tools and resources for Founders, Makers and Tinkerers - Coming soon!'
 ];
 
-// Set dynamic description based on story type for news tab
-if ($active_tab === 'news' && isset($stories['type'])) {
-    $story_type = $stories['type'];
-    $story_type_descriptions = [
-        'active' => 'Trending stories for Founders, Makers and Tinkerers',
-        'new' => 'Latest tech news and startup stories for Founders, Makers and Tinkerers', 
-        'top' => 'Top-rated stories for Founders, Makers and Tinkerers',
-        'best' => 'Best-rated stories for Founders, Makers and Tinkerers'
-    ];
-    $page_description = $story_type_descriptions[$story_type] ?? $tab_descriptions['news'];
-    $og_title = "FounderFodder - " . ucfirst($story_type) . " Stories";
+// Set dynamic description for news tab (now using mixed stream)
+if ($active_tab === 'news') {
+    $page_description = 'Curated trending stories for Founders, Makers and Tinkerers';
+    $og_title = "FounderFodder - Trending Stories";
 } else {
     $page_description = $tab_descriptions[$active_tab] ?? $tab_descriptions['news'];
     $og_title = "FounderFodder - " . ucfirst($active_tab);
@@ -67,6 +60,18 @@ include __DIR__ . '/partials/hero.php';
                                 <span class="has-text-grey is-size-6">(<?php echo htmlspecialchars(!empty($story['domain']) ? $story['domain'] : 'news.ycombinator.com'); ?>)</span>
                             </p>
                             <p class="subtitle is-6 pt-3 mb-3">
+                                <?php 
+                                // Add story type icon
+                                $type_icons = [
+                                    'active' => 'fa-solid fa-fire',
+                                    'top' => 'fa-solid fa-trophy',
+                                    'best' => 'fa-solid fa-star',
+                                    'new' => 'fa-solid fa-gem'
+                                ];
+                                $icon_class = $type_icons[$story['type']] ?? 'fa-solid fa-newspaper';
+                                $story_type_label = ucfirst($story['type']);
+                                ?>
+                                <span class="mr-3" title="<?php echo htmlspecialchars($story_type_label); ?>"><i class="<?php echo $icon_class; ?>"></i></span>
                                 <span class="mr-3"><i class="fa-solid fa-clock"></i> <?php echo htmlspecialchars($story['time_ago']); ?></span>
                             </p>
                             <?php
@@ -110,7 +115,7 @@ include __DIR__ . '/partials/hero.php';
                 <!-- Pagination -->
                 <?php if (isset($stories['pagination']) && $stories['pagination']['has_more']): ?>
                 <div class="has-text-centered mt-6">
-                    <a href="/?tab=news&type=<?php echo htmlspecialchars($stories['type']); ?>&page=<?php echo (int)$stories['pagination']['next_page']; ?>" 
+                    <a href="/?tab=news&page=<?php echo (int)$stories['pagination']['next_page']; ?>" 
                     class="button is-primary is-medium">
                         <span>More Stories</span>
                         <span class="icon">

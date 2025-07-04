@@ -19,6 +19,13 @@ const STORY_TYPES = [
     "active" => 4,
 ];
 
+// Mixed stories configuration - how many stories to intersperse
+const INTERSPERSE_INTERVAL = 3;     // Number of active stories before interspersing
+const INTERSPERSE_TOP_COUNT = 2;    // Number of "top" stories to add when interspersing
+const INTERSPERSE_BEST_COUNT = 1;   // Number of "best" stories to add when interspersing
+const INTERSPERSE_NEW_COUNT = 1;    // Number of "new" stories to add when interspersing
+const INTERSPERSE_POOL_SIZE = 25;   // Number of stories to fetch from each type for the pool
+
 function acquireLock(string $lockName) {
     $lockFile = __DIR__ . '/' . $lockName;       
     $lockHandle = fopen($lockFile, 'c');

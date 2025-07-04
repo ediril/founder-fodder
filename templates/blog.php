@@ -8,6 +8,14 @@ include __DIR__ . '/partials/hero.php';
         <div class="content is-medium">
             <div class="box">
                 <h1 class="title is-3">Blog</h1>
+                <div><h2 class="title is-4">July 4, 2025</h2>
+                <p>
+                I wasn't particularly happy about the Active/Top/Best/New selection buttons at the top, so I removed them.
+                Active stories were the only ones being shown for a few days. But it is nice to get the other kinds of stories
+                into the feed as well. It turns out I didn't care for the filter buttons and the actual fix is to mix them all into
+                a single feed. Each story now has a story type icon indicating which type it is if you care to know.
+                </p>
+                </div>
                 <div><h2 class="title is-4">July 1, 2025</h2>
                     <p>
                     I had the idea for this site for quite some time but never got around to it even though I read Hacker News
