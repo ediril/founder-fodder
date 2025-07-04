@@ -1,4 +1,6 @@
 
+- Add stats page
+
 - Add a sitemap.xml
     - Summarizer: create/update sitemap.xml
 
