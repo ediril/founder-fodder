@@ -299,6 +299,7 @@ class HackerNewsFetcher
             $filepath = $this->imgDir . "/{$storyId}{$ext}";
 
             // Stream download directly to disk to avoid high memory usage
+            // Use specialized image downloader with higher size limits
             $success = downloadUrlToFile($imageUrl, $filepath, 10);
             if ($success) {
                 echo "Successfully downloaded image for story {$storyId}\n";
@@ -314,7 +315,7 @@ class HackerNewsFetcher
     private function extractImageFromPage(string $url): ?string
     {
         try {
-            $html = fetchUrl($url, 10);
+            $html = fetchUrl($url);
             if ($html === false) {
                 echo "Failed to fetch or empty HTML content for URL: {$url}\n";
                 return null;
@@ -418,7 +419,7 @@ class HackerNewsFetcher
 
             print("Fetching page {$url}\n");
 
-            $html = fetchUrl($url, 10);
+            $html = fetchUrl($url);
             if ($html === false) {
                 echo "Failed to fetch page {$url} or empty content\n";
                 return null;
@@ -470,7 +471,7 @@ class HackerNewsFetcher
                 }
             }
 
-            $html = fetchUrl($url, 10);
+            $html = fetchUrl($url);
             if ($html === false) {
                 return null;
             }
@@ -603,6 +604,7 @@ class HackerNewsFetcher
             $filepath = $imgDir . "/{$storyId}{$ext}";
 
             // Stream download directly to disk to avoid high memory usage
+            // Use specialized image downloader with higher size limits
             $success = downloadUrlToFile($imageUrl, $filepath, 10);
             if ($success) {
                 logMessage("Successfully downloaded image for story {$storyId}");

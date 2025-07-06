@@ -5,7 +5,7 @@ const MAX_FETCH = 200;                  // 20 pages worth
 const MAX_SUMMARIZE = 30;               // 3 pages worth
 const MIN_STORY_LENGTH_FOR_SUMMARY = 200;
 
-const FETCHER_VERSION = "0.0701.001";
+const FETCHER_VERSION = "0.0706.001";
 const SUMMARIZER_VERSION = "0.0701.001";
 
 const FETCHER_LOCK_FILE_NAME = 'ff_fetch.lock';
@@ -144,7 +144,7 @@ function logMessage(string $message): void {
     echo '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
 }
 
-function fetchUrl(string $url, int $timeout = 10, array $headers = [], bool $headersOnly = false): string|array|false
+function fetchUrl(string $url, int $timeout = 10, array $headers = [], bool $headersOnly = false, int $maxSize = 10 * 1024 * 1024): string|array|false
 {
     $defaultHeaders = [
         'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -175,13 +175,22 @@ function fetchUrl(string $url, int $timeout = 10, array $headers = [], bool $hea
                 CURLOPT_CONNECTTIMEOUT => $timeout,
                 CURLOPT_USERAGENT      => $defaultHeaders[0],
                 CURLOPT_HTTPHEADER     => $allHeaders,
+                CURLOPT_MAXFILESIZE    => $maxSize,  // Limit download size
             ]);
 
             $content = curl_exec($ch);
+            $error = curl_error($ch);
             curl_close($ch);
+            
+            // Check if download was aborted due to size
+            if ($error && strpos($error, 'exceeds file size limit') !== false) {
+                logMessage("Download aborted for {$url} - content too large");
+                return false;
+            }
+            
         } else {
             // Fallback if cURL is not available
-            $content = @file_get_contents($url, false, $context);
+            $content = @file_get_contents($url, false, $context, 0, $maxSize);
         }
 
         // Return false if content is false, empty, or just whitespace
