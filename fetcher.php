@@ -1002,7 +1002,7 @@ if (php_sapi_name() === 'cli' && realpath(__FILE__) === realpath($_SERVER['SCRIP
         exit(0);
     }
     
-    $type = $options['type'] ?? 'active';
+    $type = $options['type'] ?? 'all';
     $limit = (int)($options['limit'] ?? MAX_FETCH);
     $db = $options['db'] ?? DB_PATH;
     $storyId = isset($options['id']) ? (int)$options['id'] : null;
