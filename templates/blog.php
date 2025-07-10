@@ -8,16 +8,29 @@ include __DIR__ . '/partials/hero.php';
         <div class="content is-medium">
             <div class="box px-2">
                 <h1 class="title is-3 mb-0">Blog</h1>
+
+                <div><h2 class="title is-4 mt-4 mb-1">July 10, 2025</h2>
+                <p>
+                I love incrementally improving a project, making it better bit by bit, watching all the accumulation of changes 
+                build something great over time!
+                </p><p>
+                I just pushed a commit to fix the story line-up. Every page now shows 5 active, 3 top, 2 new and 1 best 
+                story, with the same ranking they appear at HN. If you don't care for the "mixture of stories" view and want only one
+                type of story, I added links to the footer to show stories of a specific type.
+                </p>
+                </div>
+
                 <div><h2 class="title is-4 mt-4 mb-1">July 4, 2025</h2>
                 <p>
                 I wasn't particularly happy about the Active/Top/Best/New selection buttons at the top, so I removed them.
                 Active stories were the only ones being shown for a few days. But it is nice to get the other kinds of stories
                 into the feed as well, to round out the types of stories shown to readers.
-                </p><p></p>
+                </p><p>
                 So mixed all story types into the feed now. I think that's a much better design than having to decide which
                 story type to read. Each story has a "story type icon" indicating which type it is if you care to know.
                 </p>
                 </div>
+
                 <div><h2 class="title is-4 mt-4 mb-1">July 1, 2025</h2>
                     <p>
                     I had the idea for this site for quite some time but never got around to it even though I read Hacker News
