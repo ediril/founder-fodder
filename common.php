@@ -11,7 +11,6 @@ const SUMMARIZER_VERSION = "0.0701.001";
 const FETCHER_LOCK_FILE_NAME = 'ff_fetch.lock';
 const SUMMARIZER_LOCK_FILE_NAME = 'ff_summarize.lock';
 const DB_PATH = "stories.db";
-const STORIES_PER_PAGE = 10;
 const STORY_TYPES = [
     "top" => 1,
     "new" => 2,
@@ -19,12 +18,11 @@ const STORY_TYPES = [
     "active" => 4,
 ];
 
-// Mixed stories configuration - how many stories to intersperse
-const INTERSPERSE_INTERVAL = 3;     // Number of active stories before interspersing
-const INTERSPERSE_TOP_COUNT = 2;    // Number of "top" stories to add when interspersing
-const INTERSPERSE_BEST_COUNT = 1;   // Number of "best" stories to add when interspersing
-const INTERSPERSE_NEW_COUNT = 1;    // Number of "new" stories to add when interspersing
-const INTERSPERSE_POOL_SIZE = 25;   // Number of stories to fetch from each type for the pool
+// Mixed stories configuration - exact counts for each type per page
+const ACTIVE_STORIES_PER_PAGE = 5;     // Number of active stories per page
+const TOP_STORIES_PER_PAGE = 3;        // Number of top stories per page
+const NEW_STORIES_PER_PAGE = 2;        // Number of new stories per page
+const BEST_STORIES_PER_PAGE = 1;       // Number of best stories per page
 
 function acquireLock(string $lockName) {
     $lockFile = __DIR__ . '/' . $lockName;       
