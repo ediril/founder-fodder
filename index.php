@@ -156,9 +156,9 @@ function get_mixed_stories(int $page = 1): array {
         
         // Calculate offsets for each story type
         $active_offset = ($page - 1) * ACTIVE_STORIES_PER_PAGE;
-        $top_offset = 0; // Always show top-ranked stories
-        $best_offset = 0; // Always show top-ranked stories
-        $new_offset = 0; // Always show top-ranked stories
+        $top_offset = ($page - 1) * TOP_STORIES_PER_PAGE;
+        $best_offset = ($page - 1) * BEST_STORIES_PER_PAGE;
+        $new_offset = ($page - 1) * NEW_STORIES_PER_PAGE;
         
         // Get active stories
         $stmt = $conn->prepare('

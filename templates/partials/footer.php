@@ -11,8 +11,7 @@
                 <a href="/legal">Legal</a> • 
                 <a href="/privacy">Privacy</a>
             </p>
-            <p class="mb-1"><a href="https://emrahdiril.com">Emrah Diril</a> &copy; 2025</p>
-            <p>Created with ✨ & ❤️</p>
+            <p class="mb-1"><a href="https://emrahdiril.com">Emrah Diril</a> &copy; 2025 ✨❤️</p>
         </div>
     </footer>
 </body>
