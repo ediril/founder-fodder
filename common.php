@@ -5,7 +5,7 @@ const MAX_FETCH = 200;                  // 20 pages worth
 const MAX_SUMMARIZE = 30;               // 3 pages worth
 const MIN_STORY_LENGTH_FOR_SUMMARY = 200;
 
-const FETCHER_VERSION = "0.0709.001";
+const FETCHER_VERSION = "0.0721.001";
 const SUMMARIZER_VERSION = "0.0701.001";
 
 const FETCHER_LOCK_FILE_NAME = 'ff_fetch.lock';

@@ -835,6 +835,10 @@ class HackerNewsFetcher
 
             $this->pdo->commit();
             logMessage("Completed fetching {$processed} active stories");
+            
+            // After successfully fetching active stories, trim any beyond position 200
+            $this->trimActiveStoriesBeyond200();
+            
         } catch (\Exception $e) {
             $this->pdo->rollBack();
             logMessage('Error: ' . $e->getMessage());
@@ -887,6 +891,57 @@ class HackerNewsFetcher
             $this->pdo->rollback();
             echo "Error storing story {$storyId}: " . $e->getMessage() . "\n";
             return false;
+        }
+    }
+
+    /**
+     * Remove "active" rankings from stories beyond the first 200 positions.
+     * This ensures only the top 200 most active stories maintain their "active" status.
+     */
+    public function trimActiveStoriesBeyond200(): int
+    {
+        logMessage("Trimming active stories beyond position 200...");
+        
+        try {
+            $typeId = STORY_TYPES['active'];
+            
+            // First, get the top 200 active stories by rank (properly ordered)
+            $stmt = $this->pdo->prepare('
+                SELECT id 
+                FROM ranks 
+                WHERE type = ? 
+                ORDER BY rank ASC 
+                LIMIT 200
+            ');
+            $stmt->execute([$typeId]);
+            $top200Ids = $stmt->fetchAll(\PDO::FETCH_COLUMN, 0);
+            
+            if (empty($top200Ids)) {
+                logMessage("No active stories found to preserve");
+                return 0;
+            }
+            
+            // Build placeholders for the NOT IN clause
+            $placeholders = implode(',', array_fill(0, count($top200Ids), '?'));
+            
+            // Delete all active rankings that are NOT in the top 200 list
+            $stmt = $this->pdo->prepare("
+                DELETE FROM ranks 
+                WHERE type = ? AND id NOT IN ({$placeholders})
+            ");
+            
+            // Execute with type ID first, then the story IDs
+            $params = array_merge([$typeId], $top200Ids);
+            $stmt->execute($params);
+            
+            $deletedCount = $stmt->rowCount();
+            logMessage("Preserved top 200 active stories, removed active ranking from {$deletedCount} stories");
+            
+            return $deletedCount;
+            
+        } catch (\Exception $e) {
+            logMessage("Error trimming active stories: " . $e->getMessage());
+            throw $e;
         }
     }
 
@@ -983,7 +1038,7 @@ if (!function_exists('array_any')) {
 // Command line interface - only run when this file is executed directly
 if (php_sapi_name() === 'cli' && realpath(__FILE__) === realpath($_SERVER['SCRIPT_FILENAME'])) {
     // Define valid options
-    $options = getopt('h', ['type:', 'limit:', 'db:', 'id:', 'help']);
+    $options = getopt('h', ['type:', 'limit:', 'db:', 'id:', 'trim-active', 'help']);
     
     if (count($options) !== count($argv) - 1) {
         $invalidCount = (count($argv) - 1) - count($options);
@@ -998,6 +1053,7 @@ if (php_sapi_name() === 'cli' && realpath(__FILE__) === realpath($_SERVER['SCRIP
         echo "  --limit=LIMIT   Maximum number of stories to fetch per type (default: 100)\n";
         echo "  --db=PATH       Path to SQLite database (default: stories.db)\n";
         echo "  --id=STORY-ID   Fetch a single story by ID\n";
+        echo "  --trim-active   Remove active rankings from stories beyond position 200\n";
         echo "  --help, -h      Show this help message\n";
         exit(0);
     }
@@ -1017,7 +1073,12 @@ if (php_sapi_name() === 'cli' && realpath(__FILE__) === realpath($_SERVER['SCRIP
 
     logMessage("Fetcher Version: " . FETCHER_VERSION);
     
-    if ($storyId) {
+    if (isset($options['trim-active'])) {
+        // Run active story trimming only
+        $deletedCount = $fetcher->trimActiveStoriesBeyond200();
+        logMessage("Active story trimming completed. Removed {$deletedCount} rankings.");
+        exit(0);
+    } elseif ($storyId) {
         // Fetch single story by ID
         $success = $fetcher->fetchStoryById($storyId);
         if (!$success) {
