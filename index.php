@@ -151,7 +151,7 @@ function get_mixed_stories(int $page = 1): array {
         // Calculate offset for simple pagination
         $offset = ($page - 1) * $per_page;
         
-        // Simple query: get next best stories by rank
+        // Simple query: get next best stories by rank, excluding stories where best rank is "best"
         $sql = '
             SELECT s.id, s.title, s.url, s.domain, s.comments_url, s.comments_count, 
                    s.score, s.user, s.timestamp,
@@ -159,23 +159,19 @@ function get_mixed_stories(int $page = 1): array {
                    MIN(r.rank) as ranking
             FROM stories s
             INNER JOIN ranks r ON s.id = r.id
+            WHERE (SELECT r2.type FROM ranks r2 WHERE r2.id = s.id ORDER BY r2.rank ASC LIMIT 1) != ?
             GROUP BY s.id 
             ORDER BY MIN(r.rank) ASC, s.id ASC 
             LIMIT ? OFFSET ?';
         
         $stmt = $conn->prepare($sql);
-        $stmt->execute([$per_page, $offset]);
+        $stmt->execute([STORY_TYPES['best'], $per_page, $offset]);
         
         // Collect all stories in rank order
         $mixed_stories = [];
         
         while ($row = $stmt->fetch()) {
             $display_category = (int)$row['display_category'];
-            
-            // Apply minimal filters
-            if ($display_category === STORY_TYPES['new'] && (int)$row['comments_count'] < 2) {
-                continue; // Skip new stories with < 2 comments
-            }
             
             // Add story metadata
             $row['time_ago'] = format_time_ago((int)$row['timestamp']);
@@ -231,9 +227,13 @@ function get_mixed_stories(int $page = 1): array {
         // Simple pagination: has more if we got the full page
         $has_more = count($mixed_stories) >= $per_page;
         
-        // Get total count for pagination info
-        $total_stmt = $conn->prepare('SELECT COUNT(DISTINCT s.id) as total FROM stories s INNER JOIN ranks r ON s.id = r.id');
-        $total_stmt->execute();
+        // Get total count for pagination info (excluding stories where best rank is "best")
+        $total_stmt = $conn->prepare('
+            SELECT COUNT(DISTINCT s.id) as total 
+            FROM stories s 
+            INNER JOIN ranks r ON s.id = r.id 
+            WHERE (SELECT r2.type FROM ranks r2 WHERE r2.id = s.id ORDER BY r2.rank ASC LIMIT 1) != ?');
+        $total_stmt->execute([STORY_TYPES['best']]);
         $total_result = $total_stmt->fetch();
         $total_stories = (int)($total_result['total'] ?? 0);
         
