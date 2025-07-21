@@ -115,7 +115,16 @@ include __DIR__ . '/partials/hero.php';
                 <!-- Pagination -->
                 <?php if (isset($stories['pagination']) && $stories['pagination']['has_more']): ?>
                 <div class="has-text-centered mt-6">
-                    <a href="/?tab=news&page=<?php echo (int)$stories['pagination']['next_page']; ?>" 
+                    <?php
+                    // Check if we're viewing a specific story type or mixed stories
+                    $story_type = $_GET['type'] ?? null;
+                    if ($story_type && in_array($story_type, ['top', 'new', 'active', 'best'])) {
+                        $pagination_url = "/?type=" . urlencode($story_type) . "&page=" . (int)$stories['pagination']['next_page'];
+                    } else {
+                        $pagination_url = "/?tab=news&page=" . (int)$stories['pagination']['next_page'];
+                    }
+                    ?>
+                    <a href="<?php echo htmlspecialchars($pagination_url); ?>" 
                     class="button is-primary is-medium">
                         <span>More Stories</span>
                         <span class="icon">

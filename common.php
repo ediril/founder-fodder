@@ -1,12 +1,13 @@
 <?php
 
+const FETCHER_VERSION = "0.0721.001";
+const SUMMARIZER_VERSION = "0.0701.001";
+
 const MAX_COMMENTS_TO_FETCH = 2500;
 const MAX_FETCH = 200;                  // 20 pages worth
 const MAX_SUMMARIZE = 30;               // 3 pages worth
 const MIN_STORY_LENGTH_FOR_SUMMARY = 200;
-
-const FETCHER_VERSION = "0.0721.001";
-const SUMMARIZER_VERSION = "0.0701.001";
+const DEFAULT_PER_PAGE = 20;
 
 const FETCHER_LOCK_FILE_NAME = 'ff_fetch.lock';
 const SUMMARIZER_LOCK_FILE_NAME = 'ff_summarize.lock';
@@ -17,12 +18,6 @@ const STORY_TYPES = [
     "best" => 3,
     "active" => 4,
 ];
-
-// Mixed stories configuration - exact counts for each type per page
-const ACTIVE_STORIES_PER_PAGE = 5;     // Number of active stories per page
-const TOP_STORIES_PER_PAGE = 3;        // Number of top stories per page
-const NEW_STORIES_PER_PAGE = 2;        // Number of new stories per page
-const BEST_STORIES_PER_PAGE = 1;       // Number of best stories per page
 
 function acquireLock(string $lockName) {
     $lockFile = __DIR__ . '/' . $lockName;       

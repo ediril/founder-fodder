@@ -8,6 +8,26 @@ include __DIR__ . '/partials/hero.php';
         <div class="content is-medium">
             <div class="box px-2">
                 <h1 class="title is-3 mb-0">Blog</h1>
+                <div class="pt-5"><h2 class="title is-4 pt-5 mb-1">July 21, 2025</h2>
+                <p>
+                I was travelling recently and I was unable to fix the annoying bug that after a few pages,
+                the stories were repeating, ugggh! Sorry about that. In trying to fix this however, AI struggled
+                quite a bit, and I gave it some thought as well and it turned out to be a difficult problem to 
+                come up with a mixture of stories that don't show the same story on multiple pages. The source of
+                difficulty is that a given story might belong to multiple categories: for example, it could be a top 
+                story and an active story at the same time.
+                </p><p>
+                I wanted to enforce a particular mixture ratio but that turned out to be too much trouble and most likely
+                not a big deal honestly. So we settled on an actual mixture, like shuffling cards of different colors while
+                paying attention to their initial order. I had decided to eliminate new stories that have less than at least a 
+                couple of comments since they are mostly noise if noone cares to even comment on them, and that's still in effect
+                </p><p>
+                Let's see how this new mixture goes. Of course you can still view stories of a single type using the links in the
+                footer.
+                </p><p>
+                Happy reading!
+                </p>
+                </div>
 
                 <div class="pt-5"><h2 class="title is-4 pt-5 mb-1">July 10, 2025</h2>
                 <p>

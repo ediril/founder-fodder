@@ -136,132 +136,72 @@ function get_page_stories(string $story_type, int $page, int $per_page): array {
 }
 
 /**
- * Get mixed stories: exactly 5 active, 3 top, 2 new, and 1 best stories per page
- * Stories are mixed together in a balanced way across the page
+ * Get mixed stories with simple pagination
+ * Shows next best stories with natural category distribution
  */
 function get_mixed_stories(int $page = 1): array {
-    // Calculate total stories per page from individual story type counts
-    $per_page = ACTIVE_STORIES_PER_PAGE + TOP_STORIES_PER_PAGE + NEW_STORIES_PER_PAGE + BEST_STORIES_PER_PAGE;
+    // Simple approach: show next stories with natural category distribution
+    $per_page = DEFAULT_PER_PAGE;
     
     try {
         debugLog("Getting mixed stories: page=$page, per_page=$per_page");
         
         $conn = get_db_connection();
         
-        // Get total count of active stories for pagination
-        $stmt = $conn->prepare('SELECT COUNT(*) as total FROM ranks WHERE type = ?');
-        $stmt->execute([STORY_TYPES['active']]);
-        $result = $stmt->fetch();
-        $total_active = (int)($result['total'] ?? 0);
+        // Calculate offset for simple pagination
+        $offset = ($page - 1) * $per_page;
         
-        // Calculate offsets for each story type
-        $active_offset = ($page - 1) * ACTIVE_STORIES_PER_PAGE;
-        $top_offset = ($page - 1) * TOP_STORIES_PER_PAGE;
-        $best_offset = ($page - 1) * BEST_STORIES_PER_PAGE;
-        $new_offset = ($page - 1) * NEW_STORIES_PER_PAGE;
-        
-        // Get active stories
-        $stmt = $conn->prepare('
+        // Simple query: get next best stories by rank
+        $sql = '
             SELECT s.id, s.title, s.url, s.domain, s.comments_url, s.comments_count, 
-                   s.score, s.user, s.timestamp, r.type, r.rank as ranking
+                   s.score, s.user, s.timestamp,
+                   (SELECT r2.type FROM ranks r2 WHERE r2.id = s.id ORDER BY r2.rank ASC LIMIT 1) as display_category,
+                   MIN(r.rank) as ranking
             FROM stories s
             INNER JOIN ranks r ON s.id = r.id
-            WHERE r.type = ?
-            ORDER BY r.rank
-            LIMIT ? OFFSET ?
-        ');
-        $stmt->execute([STORY_TYPES['active'], ACTIVE_STORIES_PER_PAGE, $active_offset]);
+            GROUP BY s.id 
+            ORDER BY MIN(r.rank) ASC, s.id ASC 
+            LIMIT ? OFFSET ?';
         
-        $active_stories = [];
-        while ($row = $stmt->fetch()) {
-            $row['time_ago'] = format_time_ago((int)$row['timestamp']);
-            $row['formatted_time'] = date("Y-m-d H:i:s", (int)$row['timestamp']);
-            $row['type'] = 'active';
-            $active_stories[] = $row;
-        }
+        $stmt = $conn->prepare($sql);
+        $stmt->execute([$per_page, $offset]);
         
-        // Get top stories
-        $stmt = $conn->prepare('
-            SELECT s.id, s.title, s.url, s.domain, s.comments_url, s.comments_count, 
-                   s.score, s.user, s.timestamp, r.type, r.rank as ranking
-            FROM stories s
-            INNER JOIN ranks r ON s.id = r.id
-            WHERE r.type = ?
-            ORDER BY r.rank
-            LIMIT ? OFFSET ?
-        ');
-        $stmt->execute([STORY_TYPES['top'], TOP_STORIES_PER_PAGE, $top_offset]);
-        
-        $top_stories = [];
-        while ($row = $stmt->fetch()) {
-            $row['time_ago'] = format_time_ago((int)$row['timestamp']);
-            $row['formatted_time'] = date("Y-m-d H:i:s", (int)$row['timestamp']);
-            $row['type'] = 'top';
-            $top_stories[] = $row;
-        }
-        
-        // Get new stories (only with >= 2 comments)
-        $stmt = $conn->prepare('
-            SELECT s.id, s.title, s.url, s.domain, s.comments_url, s.comments_count, 
-                   s.score, s.user, s.timestamp, r.type, r.rank as ranking
-            FROM stories s
-            INNER JOIN ranks r ON s.id = r.id
-            WHERE r.type = ? AND s.comments_count >= 2
-            ORDER BY r.rank
-            LIMIT ? OFFSET ?
-        ');
-        $stmt->execute([STORY_TYPES['new'], NEW_STORIES_PER_PAGE, $new_offset]);
-        
-        $new_stories = [];
-        while ($row = $stmt->fetch()) {
-            $row['time_ago'] = format_time_ago((int)$row['timestamp']);
-            $row['formatted_time'] = date("Y-m-d H:i:s", (int)$row['timestamp']);
-            $row['type'] = 'new';
-            $new_stories[] = $row;
-        }
-        
-        // Get best stories
-        $stmt = $conn->prepare('
-            SELECT s.id, s.title, s.url, s.domain, s.comments_url, s.comments_count, 
-                   s.score, s.user, s.timestamp, r.type, r.rank as ranking
-            FROM stories s
-            INNER JOIN ranks r ON s.id = r.id
-            WHERE r.type = ?
-            ORDER BY r.rank
-            LIMIT ? OFFSET ?
-        ');
-        $stmt->execute([STORY_TYPES['best'], BEST_STORIES_PER_PAGE, $best_offset]);
-        
-        $best_stories = [];
-        while ($row = $stmt->fetch()) {
-            $row['time_ago'] = format_time_ago((int)$row['timestamp']);
-            $row['formatted_time'] = date("Y-m-d H:i:s", (int)$row['timestamp']);
-            $row['type'] = 'best';
-            $best_stories[] = $row;
-        }
-        
-        // Create mixed stream in sequential blocks: 5 active, 3 top, 2 new, 1 best
+        // Collect all stories in rank order
         $mixed_stories = [];
         
-        // Add active stories
-        for ($i = 0; $i < ACTIVE_STORIES_PER_PAGE && $i < count($active_stories); $i++) {
-            $mixed_stories[] = $active_stories[$i];
+        while ($row = $stmt->fetch()) {
+            $display_category = (int)$row['display_category'];
+            
+            // Apply minimal filters
+            if ($display_category === STORY_TYPES['new'] && (int)$row['comments_count'] < 2) {
+                continue; // Skip new stories with < 2 comments
+            }
+            
+            // Add story metadata
+            $row['time_ago'] = format_time_ago((int)$row['timestamp']);
+            $row['formatted_time'] = date("Y-m-d H:i:s", (int)$row['timestamp']);
+            
+            // Convert display category back to string for compatibility
+            switch ($display_category) {
+                case STORY_TYPES['active']:
+                    $row['type'] = 'active';
+                    break;
+                case STORY_TYPES['top']:
+                    $row['type'] = 'top';
+                    break;
+                case STORY_TYPES['new']:
+                    $row['type'] = 'new';
+                    break;
+                case STORY_TYPES['best']:
+                    $row['type'] = 'best';
+                    break;
+            }
+            
+            $mixed_stories[] = $row;
         }
         
-        // Add top stories
-        for ($i = 0; $i < TOP_STORIES_PER_PAGE && $i < count($top_stories); $i++) {
-            $mixed_stories[] = $top_stories[$i];
-        }
-        
-        // Add new stories
-        for ($i = 0; $i < NEW_STORIES_PER_PAGE && $i < count($new_stories); $i++) {
-            $mixed_stories[] = $new_stories[$i];
-        }
-        
-        // Add best stories
-        for ($i = 0; $i < BEST_STORIES_PER_PAGE && $i < count($best_stories); $i++) {
-            $mixed_stories[] = $best_stories[$i];
-        }
+        // Set next page number for pagination
+        $next_page = $page + 1;
         
         // Get all story IDs for batch processing
         $story_ids = array_column($mixed_stories, 'id');
@@ -288,14 +228,22 @@ function get_mixed_stories(int $page = 1): array {
             unset($story); // Clean up reference
         }
         
-        // Calculate pagination based on active stories count (since they're the main stream)
+        // Simple pagination: has more if we got the full page
+        $has_more = count($mixed_stories) >= $per_page;
+        
+        // Get total count for pagination info
+        $total_stmt = $conn->prepare('SELECT COUNT(DISTINCT s.id) as total FROM stories s INNER JOIN ranks r ON s.id = r.id');
+        $total_stmt->execute();
+        $total_result = $total_stmt->fetch();
+        $total_stories = (int)($total_result['total'] ?? 0);
+        
         $pagination = [
-            'current_page' => $page,
             'per_page' => $per_page,
-            'total' => $total_active,
-            'total_pages' => ceil($total_active / ACTIVE_STORIES_PER_PAGE),
-            'has_more' => ($page * ACTIVE_STORIES_PER_PAGE) < $total_active,
-            'next_page' => ($page * ACTIVE_STORIES_PER_PAGE) < $total_active ? $page + 1 : null,
+            'total' => $total_stories,
+            'has_more' => $has_more,
+            'next_page' => $has_more ? $next_page : null,
+            'current_page' => $page,
+            'total_pages' => ceil($total_stories / $per_page)
         ];
         
         return [
@@ -308,12 +256,12 @@ function get_mixed_stories(int $page = 1): array {
         return [
             'stories' => [],
             'pagination' => [
-                'current_page' => $page,
                 'per_page' => $per_page,
                 'total' => 0,
-                'total_pages' => 0,
                 'has_more' => false,
-                'next_page' => null
+                'next_page' => null,
+                'current_page' => $page,
+                'total_pages' => 0
             ],
             'type' => 'mixed',
             'error' => $e->getMessage()
@@ -417,9 +365,9 @@ if ($path === '/' || $path === '/index.php') {
     if ($story_type && in_array($story_type, ['top', 'new', 'active', 'best'])) {
         // Get stories for specific type
         $page = max(1, (int)($_GET['page'] ?? 1));
-        // Calculate total stories per page (same as mixed view)
-        $total_per_page = ACTIVE_STORIES_PER_PAGE + TOP_STORIES_PER_PAGE + NEW_STORIES_PER_PAGE + BEST_STORIES_PER_PAGE;
-        $stories = get_page_stories($story_type, $page, $total_per_page);
+        // Use same per-page count as mixed view
+        $per_page = 10;
+        $stories = get_page_stories($story_type, $page, $per_page);
         
         $db = new SQLite3(DB_PATH);
         // Get last updated time for this story type
@@ -433,7 +381,7 @@ if ($path === '/' || $path === '/index.php') {
         // Get mixed stories for the main page (active stories interspersed with top/best)
         $page = max(1, (int)($_GET['page'] ?? 1));
         
-        // Get mixed stories for current page
+        // Get mixed stories with page-based pagination
         $stories = get_mixed_stories($page);
         
         $db = new SQLite3(DB_PATH);
