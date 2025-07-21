@@ -3,6 +3,7 @@
         <p class="is-size-6 mb-1">
                 <a href="/?type=active">Active</a> • 
                 <a href="/?type=top">Top</a> • 
+                <a href="/?type=new">New</a> • 
                 <a href="/?type=best">Best</a>
             </p>
             <p class="is-size-5 pb-2">
