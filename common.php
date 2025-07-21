@@ -9,6 +9,11 @@ const MAX_SUMMARIZE = 30;               // 3 pages worth
 const MIN_STORY_LENGTH_FOR_SUMMARY = 200;
 const DEFAULT_PER_PAGE = 20;
 
+// Cmposition for mixed stories page
+const ACTIVE_PER_PAGE = 9;
+const TOP_PER_PAGE = 7;
+const NEW_PER_PAGE = 4;
+
 const FETCHER_LOCK_FILE_NAME = 'ff_fetch.lock';
 const SUMMARIZER_LOCK_FILE_NAME = 'ff_summarize.lock';
 const DB_PATH = "stories.db";
