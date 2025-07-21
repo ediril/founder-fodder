@@ -10,6 +10,18 @@ include __DIR__ . '/partials/hero.php';
                 <h1 class="title is-3 mb-0">Blog</h1>
                 <div class="pt-5"><h2 class="title is-4 pt-5 mb-1">July 21, 2025</h2>
                 <p>
+                Ah, the obssessed mind is a special kind of double-edged sword.. In a flash of brilliance,
+                we were able to bring back the mixture of active, top and new stories to the default news feed.
+                What was with all the difficulty we had earlier? Who knows, anyway.. You're welcome! 
+                </p><p>
+                I kept the best stories out of the main feed though because they change very slowly and it is not
+                fun to keep seeing the same stories over and over even if it's one or two per page. If you'd like to
+                see them, they are still available via the link in the footer.
+                </p>
+                </div>
+
+                <div class="pt-5"><h2 class="title is-4 pt-5 mb-1">July 20, 2025</h2>
+                <p>
                 I was travelling recently and I was unable to fix the annoying bug that after a few pages,
                 the stories were repeating, ugggh! Sorry about that. In trying to fix this however, AI struggled
                 quite a bit, and I gave it some thought as well and it turned out to be a difficult problem to 
