@@ -836,9 +836,6 @@ class HackerNewsFetcher
             $this->pdo->commit();
             logMessage("Completed fetching {$processed} active stories");
             
-            // After successfully fetching active stories, trim any beyond position 200
-            $this->trimActiveStoriesBeyond200();
-            
         } catch (\Exception $e) {
             $this->pdo->rollBack();
             logMessage('Error: ' . $e->getMessage());
