@@ -366,7 +366,7 @@ if ($path === '/' || $path === '/index.php') {
         // Get stories for specific type
         $page = max(1, (int)($_GET['page'] ?? 1));
         // Use same per-page count as mixed view
-        $per_page = 10;
+        $per_page = DEFAULT_PER_PAGE;
         $stories = get_page_stories($story_type, $page, $per_page);
         
         $db = new SQLite3(DB_PATH);
