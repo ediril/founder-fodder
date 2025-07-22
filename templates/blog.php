@@ -8,7 +8,7 @@ include __DIR__ . '/partials/hero.php';
         <div class="content is-medium">
             <div class="box px-2">
                 <h1 class="title is-3 mb-0">Blog</h1>
-                <div class="pt-5"><h2 class="title is-4 pt-5 mb-1">July 21, 2025</h2>
+                <div class="pt-5"><h2 id="july-21-2025" class="title is-4 pt-5 mb-1"><a href="#2025-07-21">July 21, 2025</a></h2>
                 <p>
                 Ah, the obssessed mind is a special kind of double-edged sword.. In a flash of brilliance,
                 we were able to bring back the mixture of active, top and new stories to the default news feed.
@@ -20,7 +20,7 @@ include __DIR__ . '/partials/hero.php';
                 </p>
                 </div>
 
-                <div class="pt-5"><h2 class="title is-4 pt-5 mb-1">July 20, 2025</h2>
+                <div class="pt-5"><h2 id="july-20-2025" class="title is-4 pt-5 mb-1"><a href="#2025-07-20">July 20, 2025</a></h2>
                 <p>
                 I was travelling recently and I was unable to fix the annoying bug that after a few pages,
                 the stories were repeating, ugggh! Sorry about that. In trying to fix this however, AI struggled
@@ -41,7 +41,7 @@ include __DIR__ . '/partials/hero.php';
                 </p>
                 </div>
 
-                <div class="pt-5"><h2 class="title is-4 pt-5 mb-1">July 10, 2025</h2>
+                <div class="pt-5"><h2 id="july-10-2025" class="title is-4 pt-5 mb-1"><a href="#2025-07-10">July 10, 2025</a></h2>
                 <p>
                 I love incrementally improving a project, making it better bit by bit, watching all the accumulation of changes 
                 build something great over time!
@@ -52,7 +52,7 @@ include __DIR__ . '/partials/hero.php';
                 </p>
                 </div>
 
-                <div class="pt-5"><h2 class="title is-4 pt-5 mb-1">July 4, 2025</h2>
+                <div class="pt-5"><h2 id="july-4-2025" class="title is-4 pt-5 mb-1"><a href="#2025-07-04">July 4, 2025</a></h2>
                 <p>
                 I wasn't particularly happy about the Active/Top/Best/New selection buttons at the top, so I removed them.
                 Active stories were the only ones being shown for a few days. But it is nice to get the other kinds of stories
@@ -63,7 +63,7 @@ include __DIR__ . '/partials/hero.php';
                 </p>
                 </div>
 
-                <div class="pt-5"><h2 class="title is-4 pt-5 mb-1">July 1, 2025</h2>
+                <div class="pt-5"><h2 id="july-1-2025" class="title is-4 pt-5 mb-1"><a href="#2025-07-01">July 1, 2025</a></h2>
                 <p>
                 I had the idea for this site for quite some time but never got around to it even though I read Hacker News
                 regularly. That is, until vibe coding became a thing and I thought it is the perfect well-defined mini-project.
