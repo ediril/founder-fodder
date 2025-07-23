@@ -1,6 +1,4 @@
 
-- Put links to "best", "top", "new" stories in the footer
-
 - Add stats page
 
 - Add a sitemap.xml
