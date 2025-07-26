@@ -756,9 +756,9 @@ class HackerNewsFetcher
             foreach ($storyIds as $ranking => $storyId) {
                 $story = $this->fetchStoryDetails($storyId);
                 if ($story) {
-                    // Skip "new" stories with less than 2 comments
-                    if ($storyType === 'new' && ($story['descendants'] ?? 0) < 2) {
-                        logMessage("Skipping story {$storyId} (new story with < 2 comments)");
+                    // Skip "new" stories with less than 1 comment
+                    if ($storyType === 'new' && ($story['descendants'] ?? 0) < 1) {
+                        logMessage("Skipping story {$storyId} (new story with < 1 comment)");
                         continue;
                     }
                     
