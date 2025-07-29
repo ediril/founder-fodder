@@ -67,7 +67,7 @@ include __DIR__ . '/partials/head.php';
         </div>
     </section>
     
-    <section class="section summary-section py-6">
+    <section class="section summary-section py-4 px-3">
         <div class="container">
             <div class="content">
                 <?php 
@@ -76,7 +76,7 @@ include __DIR__ . '/partials/head.php';
                 ?>
                 
                 <?php if ($has_story_summary): ?>
-                <div class="box summary-card mb-6">
+                <div class="box summary-card mb-6 p-2">
                     <h2 class="is-4 has-text-weight-bold mb-2">
                         <span class="icon has-text-primary"><i class="fa-regular fa-file-lines"></i></span>
                         Story Summary
