@@ -15,11 +15,7 @@
 
 - Check if comments are getting updated every 6 hours within 24 hours
 
-
 ## Maybe later
-
-- Summarizer: Delete stories, comments and summaries past 500th story in each category
-    Leave the links in the database, delete the artifacts
 
 - Fetcher: We can do the fetch and store in one go
 

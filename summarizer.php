@@ -499,6 +499,110 @@ class StorySummarizer {
         return implode("\n", $cleanedLines);
     }
     
+    /**
+     * Clean up story artifacts older than CLEANUP_RETENTION_DAYS
+     * Removes: images, story/comment summaries, and original files
+     * Keeps: database records (stories and rankings)
+     */
+    public function cleanupOldArtifacts(): void
+    {
+        $cutoffTime = time() - (CLEANUP_RETENTION_DAYS * 24 * 60 * 60);
+        logMessage("Starting cleanup of artifacts older than " . date('Y-m-d H:i:s', $cutoffTime) . " (" . CLEANUP_RETENTION_DAYS . " days)");
+        
+        try {
+            // Get stories older than retention period
+            $stmt = $this->pdo->prepare("
+                SELECT id, fetched_at 
+                FROM stories 
+                WHERE fetched_at < ?
+                ORDER BY fetched_at ASC
+            ");
+            $stmt->execute([$cutoffTime]);
+            $oldStories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            if (empty($oldStories)) {
+                logMessage("No stories older than " . CLEANUP_RETENTION_DAYS . " days found");
+                return;
+            }
+            
+            logMessage("Found " . count($oldStories) . " stories older than " . CLEANUP_RETENTION_DAYS . " days");
+            
+            $deletedCounts = [
+                'images' => 0,
+                'story_summaries' => 0,
+                'comment_summaries' => 0,
+                'story_originals' => 0,
+                'comment_originals' => 0
+            ];
+            
+            foreach ($oldStories as $story) {
+                $storyId = $story['id'];
+                $fetchedDate = date('Y-m-d', $story['fetched_at']);
+                
+                // Delete story images (all supported formats)
+                foreach (IMAGE_EXTENSIONS as $ext) {
+                    $imagePath = "static/img/stories/{$storyId}{$ext}";
+                    if (file_exists($imagePath)) {
+                        if (unlink($imagePath)) {
+                            $deletedCounts['images']++;
+                            logMessage("  Deleted image: {$imagePath} (fetched: {$fetchedDate})");
+                        }
+                    }
+                }
+                
+                // Delete story summary
+                $storySummaryPath = "{$this->outputDir}/{$storyId}-story-summary.md";
+                if (file_exists($storySummaryPath)) {
+                    if (unlink($storySummaryPath)) {
+                        $deletedCounts['story_summaries']++;
+                        logMessage("  Deleted story summary: {$storyId}-story-summary.md (fetched: {$fetchedDate})");
+                    }
+                }
+                
+                // Delete comment summary
+                $commentSummaryPath = "{$this->outputDir}/{$storyId}-comments-summary.md";
+                if (file_exists($commentSummaryPath)) {
+                    if (unlink($commentSummaryPath)) {
+                        $deletedCounts['comment_summaries']++;
+                        logMessage("  Deleted comment summary: {$storyId}-comments-summary.md (fetched: {$fetchedDate})");
+                    }
+                }
+                
+                // Delete original story file
+                $storyOriginalPath = "{$this->originalsDir}/{$storyId}-story.txt";
+                if (file_exists($storyOriginalPath)) {
+                    if (unlink($storyOriginalPath)) {
+                        $deletedCounts['story_originals']++;
+                        logMessage("  Deleted story original: {$storyId}-story.txt (fetched: {$fetchedDate})");
+                    }
+                }
+                
+                // Delete original comments file
+                $commentsOriginalPath = "{$this->originalsDir}/{$storyId}-comments.txt";
+                if (file_exists($commentsOriginalPath)) {
+                    if (unlink($commentsOriginalPath)) {
+                        $deletedCounts['comment_originals']++;
+                        logMessage("  Deleted comments original: {$storyId}-comments.txt (fetched: {$fetchedDate})");
+                    }
+                }
+            }
+            
+            // Log summary
+            $totalDeleted = array_sum($deletedCounts);
+            logMessage("Cleanup completed:");
+            logMessage("  Images: {$deletedCounts['images']}");
+            logMessage("  Story summaries: {$deletedCounts['story_summaries']}");
+            logMessage("  Comment summaries: {$deletedCounts['comment_summaries']}");
+            logMessage("  Story originals: {$deletedCounts['story_originals']}");
+            logMessage("  Comment originals: {$deletedCounts['comment_originals']}");
+            logMessage("  Total files deleted: {$totalDeleted}");
+            
+        } catch (Exception $e) {
+            logMessage("Error during cleanup: " . $e->getMessage());
+            throw $e;
+        }
+    }
+    
     private function summarize($content, $promptType) {
         try {
             // Define prompts based on content type
@@ -858,7 +962,10 @@ try {
         }
     }
 
-    // TODO: Delete stories, comments and summaries if they were fetched over 1 month ago
+    // Clean up artifacts older than the retention period
+    logMessage("=== Starting cleanup of old artifacts ===");
+    $summarizer->cleanupOldArtifacts();
+    logMessage("=== Cleanup completed ===");
     
 } catch (Exception $e) {
     echo "ERROR: " . $e->getMessage() . "\n";

@@ -1,13 +1,14 @@
 <?php
 
 const FETCHER_VERSION = "0.0726.001";
-const SUMMARIZER_VERSION = "0.0701.001";
+const SUMMARIZER_VERSION = "0.0804.001";
 
 const MAX_COMMENTS_TO_FETCH = 2500;
 const MAX_FETCH = 200;                  // 20 pages worth
 const MAX_SUMMARIZE = 30;               // 3 pages worth
 const MIN_STORY_LENGTH_FOR_SUMMARY = 200;
 const DEFAULT_PER_PAGE = 20;
+const CLEANUP_RETENTION_DAYS = 45;
 
 // Cmposition for mixed stories page
 const ACTIVE_PER_PAGE = 9;
@@ -23,6 +24,8 @@ const STORY_TYPES = [
     "best" => 3,
     "active" => 4,
 ];
+
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
 
 function acquireLock(string $lockName) {
     $lockFile = __DIR__ . '/' . $lockName;       

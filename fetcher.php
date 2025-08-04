@@ -965,7 +965,6 @@ class HackerNewsFetcher
             
             // Get all image files in the static/img/stories directory
             $imageFiles = [];
-            $allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
             
             $files = scandir($this->imgDir);
             foreach ($files as $file) {
@@ -975,7 +974,7 @@ class HackerNewsFetcher
                 
                 // Check if file has an allowed image extension
                 $hasValidExtension = false;
-                foreach ($allowedExtensions as $ext) {
+                foreach (IMAGE_EXTENSIONS as $ext) {
                     if (str_ends_with(strtolower($file), $ext)) {
                         $hasValidExtension = true;
                         break;
