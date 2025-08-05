@@ -507,7 +507,8 @@ class StorySummarizer {
     public function cleanupOldArtifacts(): void
     {
         $cutoffTime = time() - (CLEANUP_RETENTION_DAYS * 24 * 60 * 60);
-        logMessage("Starting cleanup of artifacts older than " . date('Y-m-d H:i:s', $cutoffTime) . " (" . CLEANUP_RETENTION_DAYS . " days)");
+        $dryRunPrefix = $this->dryRun ? "[DRY-RUN] " : "";
+        logMessage("{$dryRunPrefix}Starting cleanup of artifacts older than " . date('Y-m-d H:i:s', $cutoffTime) . " (" . CLEANUP_RETENTION_DAYS . " days)");
         
         try {
             // Get stories older than retention period
@@ -521,11 +522,11 @@ class StorySummarizer {
             $oldStories = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             if (empty($oldStories)) {
-                logMessage("No stories older than " . CLEANUP_RETENTION_DAYS . " days found");
+                logMessage("{$dryRunPrefix}No stories older than " . CLEANUP_RETENTION_DAYS . " days found");
                 return;
             }
             
-            logMessage("Found " . count($oldStories) . " stories older than " . CLEANUP_RETENTION_DAYS . " days");
+            logMessage("{$dryRunPrefix}Found " . count($oldStories) . " stories older than " . CLEANUP_RETENTION_DAYS . " days");
             
             $deletedCounts = [
                 'images' => 0,
@@ -543,9 +544,14 @@ class StorySummarizer {
                 foreach (IMAGE_EXTENSIONS as $ext) {
                     $imagePath = "static/img/stories/{$storyId}{$ext}";
                     if (file_exists($imagePath)) {
-                        if (unlink($imagePath)) {
+                        if ($this->dryRun) {
                             $deletedCounts['images']++;
-                            logMessage("  Deleted image: {$imagePath} (fetched: {$fetchedDate})");
+                            logMessage("  [DRY-RUN] Would delete image: {$imagePath} (fetched: {$fetchedDate})");
+                        } else {
+                            if (unlink($imagePath)) {
+                                $deletedCounts['images']++;
+                                logMessage("  Deleted image: {$imagePath} (fetched: {$fetchedDate})");
+                            }
                         }
                     }
                 }
@@ -553,49 +559,70 @@ class StorySummarizer {
                 // Delete story summary
                 $storySummaryPath = "{$this->outputDir}/{$storyId}-story-summary.md";
                 if (file_exists($storySummaryPath)) {
-                    if (unlink($storySummaryPath)) {
+                    if ($this->dryRun) {
                         $deletedCounts['story_summaries']++;
-                        logMessage("  Deleted story summary: {$storyId}-story-summary.md (fetched: {$fetchedDate})");
+                        logMessage("  [DRY-RUN] Would delete story summary: {$storyId}-story-summary.md (fetched: {$fetchedDate})");
+                    } else {
+                        if (unlink($storySummaryPath)) {
+                            $deletedCounts['story_summaries']++;
+                            logMessage("  Deleted story summary: {$storyId}-story-summary.md (fetched: {$fetchedDate})");
+                        }
                     }
                 }
                 
                 // Delete comment summary
                 $commentSummaryPath = "{$this->outputDir}/{$storyId}-comments-summary.md";
                 if (file_exists($commentSummaryPath)) {
-                    if (unlink($commentSummaryPath)) {
+                    if ($this->dryRun) {
                         $deletedCounts['comment_summaries']++;
-                        logMessage("  Deleted comment summary: {$storyId}-comments-summary.md (fetched: {$fetchedDate})");
+                        logMessage("  [DRY-RUN] Would delete comment summary: {$storyId}-comments-summary.md (fetched: {$fetchedDate})");
+                    } else {
+                        if (unlink($commentSummaryPath)) {
+                            $deletedCounts['comment_summaries']++;
+                            logMessage("  Deleted comment summary: {$storyId}-comments-summary.md (fetched: {$fetchedDate})");
+                        }
                     }
                 }
                 
                 // Delete original story file
                 $storyOriginalPath = "{$this->originalsDir}/{$storyId}-story.txt";
                 if (file_exists($storyOriginalPath)) {
-                    if (unlink($storyOriginalPath)) {
+                    if ($this->dryRun) {
                         $deletedCounts['story_originals']++;
-                        logMessage("  Deleted story original: {$storyId}-story.txt (fetched: {$fetchedDate})");
+                        logMessage("  [DRY-RUN] Would delete story original: {$storyId}-story.txt (fetched: {$fetchedDate})");
+                    } else {
+                        if (unlink($storyOriginalPath)) {
+                            $deletedCounts['story_originals']++;
+                            logMessage("  Deleted story original: {$storyId}-story.txt (fetched: {$fetchedDate})");
+                        }
                     }
                 }
                 
                 // Delete original comments file
                 $commentsOriginalPath = "{$this->originalsDir}/{$storyId}-comments.txt";
                 if (file_exists($commentsOriginalPath)) {
-                    if (unlink($commentsOriginalPath)) {
+                    if ($this->dryRun) {
                         $deletedCounts['comment_originals']++;
-                        logMessage("  Deleted comments original: {$storyId}-comments.txt (fetched: {$fetchedDate})");
+                        logMessage("  [DRY-RUN] Would delete comments original: {$storyId}-comments.txt (fetched: {$fetchedDate})");
+                    } else {
+                        if (unlink($commentsOriginalPath)) {
+                            $deletedCounts['comment_originals']++;
+                            logMessage("  Deleted comments original: {$storyId}-comments.txt (fetched: {$fetchedDate})");
+                        }
                     }
                 }
             }
             
             // Log summary
             $totalDeleted = array_sum($deletedCounts);
-            logMessage("Cleanup completed:");
+            logMessage("{$dryRunPrefix}Cleanup completed:");
             logMessage("  Images: {$deletedCounts['images']}");
             logMessage("  Story summaries: {$deletedCounts['story_summaries']}");
             logMessage("  Comment summaries: {$deletedCounts['comment_summaries']}");
             logMessage("  Story originals: {$deletedCounts['story_originals']}");
             logMessage("  Comment originals: {$deletedCounts['comment_originals']}");
-            logMessage("  Total files deleted: {$totalDeleted}");
+            $actionWord = $this->dryRun ? "would be deleted" : "deleted";
+            logMessage("  Total files {$actionWord}: {$totalDeleted}");
             
         } catch (Exception $e) {
             logMessage("Error during cleanup: " . $e->getMessage());
@@ -890,6 +917,7 @@ $options = getopt('h', [
     'download-only',
     'dry-run',
     'id:',
+    'cleanup-only',
     'help'
 ]);
 
@@ -909,6 +937,7 @@ if (isset($options['help']) || isset($options['h'])) {
     echo "  --download-only    Download story and comments content without summarizing\n";
     echo "  --dry-run          Process and show what would be summarized without calling Gemini API\n";
     echo "  --id=STORY-ID     Process a single story by ID\n";
+    echo "  --cleanup-only     Only run cleanup of old artifacts (files older than retention period)\n";
     echo "  --help, -h         Show this help message\n";
     exit(0);
 }
@@ -920,6 +949,7 @@ $outputDir = $options['output'] ?? OUTPUT_DIR;
 $downloadOnly = isset($options['download-only']);
 $dryRun = isset($options['dry-run']);
 $storyId = isset($options['id']) ? (int)$options['id'] : null;
+$cleanupOnly = isset($options['cleanup-only']);
 
 logMessage("Summarizer Version: " . SUMMARIZER_VERSION);
 
@@ -937,14 +967,22 @@ if (isset($options['download-only'])) {
 if (isset($options['dry-run'])) {
     print("dryRun: {$dryRun}\n");
 }
-if (isset($options['story-id'])) {
+if (isset($options['id'])) {
     print("storyId: {$storyId}\n");
+}
+if (isset($options['cleanup-only'])) {
+    print("cleanupOnly\n");
 }
 
 try {
     $summarizer = new StorySummarizer($dbPath, $outputDir, ORIGINALS_DIR, $dryRun);
 
-    if ($storyId) {
+    if ($cleanupOnly) {
+        // Only run cleanup
+        logMessage("=== Running cleanup of old artifacts ===");
+        $summarizer->cleanupOldArtifacts();
+        logMessage("=== Cleanup completed ===");
+    } elseif ($storyId) {
         $summarizer->processStoryById($storyId, $downloadOnly);
     } else {
         if ($storyType === 'all') {
@@ -960,12 +998,12 @@ try {
             // Process single story type
             $summarizer->run($storyType, $limit, $downloadOnly);
         }
-    }
 
-    // Clean up artifacts older than the retention period
-    logMessage("=== Starting cleanup of old artifacts ===");
-    $summarizer->cleanupOldArtifacts();
-    logMessage("=== Cleanup completed ===");
+        // Clean up artifacts older than the retention period
+        logMessage("=== Starting cleanup of old artifacts ===");
+        $summarizer->cleanupOldArtifacts();
+        logMessage("=== Cleanup completed ===");
+    }
     
 } catch (Exception $e) {
     echo "ERROR: " . $e->getMessage() . "\n";
