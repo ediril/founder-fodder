@@ -15,5 +15,8 @@
             <p class="mb-1"><a href="https://emrahdiril.com">Emrah Diril</a> &copy; 2025 ✨❤️</p>
         </div>
     </footer>
+
+    <script src="<?php echo asset_url('/static/js/site.js'); ?>"></script>
+    <script async src="https://scripts.simpleanalyticscdn.com/latest.js"></script>
 </body>
 </html> 
