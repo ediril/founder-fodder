@@ -1,8 +1,8 @@
 #!/bin/bash
 
 if [ $# -lt 1 ]; then
-  echo "No port specified, using default 8000"
-  port=8000
+  echo "No port specified, using default 8080"
+  port=8080
 else
   port=$1
 fi

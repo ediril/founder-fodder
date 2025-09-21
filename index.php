@@ -449,6 +449,94 @@ if ($path === '/' || $path === '/index.php') {
     // Include the template with stories data and active tab
     include 'templates/index.php';
 
+} elseif (preg_match('/^\/create-comment-request\/(\d+)$/', $path, $matches)) {
+    // Handle request file creation for comment summarization
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Method not allowed']);
+        exit;
+    }
+
+    $story_id = $matches[1];
+    $request_file = __DIR__ . "/comment_summary_req/{$story_id}.txt";
+
+    // If request file already exists, request is already submitted
+    if (file_exists($request_file)) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'message' => 'Request already submitted']);
+        exit;
+    }
+
+    // Rate limiting per IP address
+    $client_ip = $_SERVER['REMOTE_ADDR'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? 'unknown';
+    $ip_hash = md5($client_ip);
+    $rate_limit_file = __DIR__ . "/comment_summary_req/_rate_limit_{$ip_hash}";
+
+    try {
+        // Check server-side rate limiting (15 seconds)
+        if (file_exists($rate_limit_file)) {
+            $last_request_time = filemtime($rate_limit_file);
+            $time_since_last = time() - $last_request_time;
+
+            if ($time_since_last < 15) {
+                $remaining_time = 15 - $time_since_last;
+                http_response_code(429); // Too Many Requests
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'error' => 'Rate limited',
+                    'message' => "Please wait {$remaining_time} seconds before requesting again.",
+                    'remaining_seconds' => $remaining_time
+                ]);
+                exit;
+            }
+        }
+
+        // Update rate limit file
+        touch($rate_limit_file);
+
+        // Create empty request file
+        if (file_put_contents($request_file, '') === false) {
+            throw new Exception('Failed to create request file');
+        }
+
+        // Trigger summarizer in background
+        $summarizer_cmd = "cd " . escapeshellarg(__DIR__) . " && php summarizer.php --id=" . escapeshellarg($story_id) . " 2>&1";
+        $output = [];
+        $return_var = 0;
+        exec($summarizer_cmd, $output, $return_var);
+
+        header('Content-Type: application/json');
+
+        if ($return_var !== 0) {
+            // Log the error output for debugging
+            error_log("Summarizer command failed (exit code: $return_var): " . implode("\n", $output));
+            echo json_encode([
+                'success' => false,
+                'error' => 'Summarizer failed to start',
+                'debug_output' => $output,
+                'exit_code' => $return_var
+            ]);
+        } else {
+            echo json_encode([
+                'success' => true,
+                'message' => 'Request submitted successfully',
+                'debug_output' => $output
+            ]);
+        }
+
+    } catch (Exception $e) {
+        // Clean up request file if it was created
+        if (file_exists($request_file)) {
+            unlink($request_file);
+        }
+
+        http_response_code(500);
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Server error: ' . $e->getMessage()]);
+    }
+    exit;
+
 } elseif (preg_match('/^\/summary\/(\d+)$/', $path, $matches)) {
     // Handle combined summary page
     $story_id = $matches[1];

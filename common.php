@@ -1,7 +1,7 @@
 <?php
 
 const FETCHER_VERSION = "0.0726.001";
-const SUMMARIZER_VERSION = "0.0805.001";
+const SUMMARIZER_VERSION = "0.0921.001";
 
 const MAX_COMMENTS_TO_FETCH = 2500;
 const MAX_FETCH = 200;                  // 20 pages worth

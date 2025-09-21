@@ -116,8 +116,35 @@ include __DIR__ . '/partials/head.php';
                         </div>
                     </div>
                     <?php else: ?>
-                        <div class="summary-content markdown-body px-1 pb-6">
-                            Comments summary is not available.
+                        <div class="summary-content px-1 pb-6">
+                            <?php if ($story['comments_count'] > 10): ?>
+                                <div id="comments-summary-container" class="has-text-centered">
+                                    <br><br>
+                                    <button id="summarize-comments-btn" class="button is-primary" data-story-id="<?php echo $story['id']; ?>">
+                                        <span class="icon">
+                                            <i class="fa-solid fa-magic-wand-sparkles"></i>
+                                        </span>
+                                        <span>Summarize Comments</span>
+                                    </button>
+                                    <div id="summary-loading" class="is-hidden mt-4">
+                                        <div class="notification is-info">
+                                            <span class="icon">
+                                                <i class="fa-solid fa-spinner fa-spin"></i>
+                                            </span>
+                                            Generating comment summary... This may take a moment.
+                                        </div>
+                                    </div>
+                                    <div id="summary-error" class="is-hidden mt-4">
+                                        <div class="notification is-danger">
+                                            <span id="error-message"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php else: ?>
+                                <div class="notification is-light">
+                                    Not enough comments to summarize (<?php echo $story['comments_count']; ?> comments available).
+                                </div>
+                            <?php endif; ?>
                         </div>
                     <?php endif; ?>
                 </div>

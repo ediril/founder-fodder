@@ -2,6 +2,7 @@ _**_/
 venv/
 img/
 _originals/
+comment_summary_req/
 content/
 vendor/
 

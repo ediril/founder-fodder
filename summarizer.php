@@ -14,8 +14,19 @@ require_once __DIR__ . '/common.php';
 require_once __DIR__ . '/vendor/autoload.php';
 
 use Dotenv\Dotenv;
-$dotenv = Dotenv::createImmutable(__DIR__ . '/../../_env', '.founderfodder.env');
-$dotenv->load();
+
+// Try to load environment file, fall back to environment variables
+try {
+    $dotenv = Dotenv::createImmutable(__DIR__ . '/../../_env', '.founderfodder.env');
+    $dotenv->load();
+} catch (Exception $envException) {
+    // If .env file doesn't exist, check if we have environment variables
+    if (!isset($_SERVER['GEMINI_API_KEY'])) {
+        echo "ERROR: GEMINI_API_KEY environment variable not found and no .env file available\n";
+        echo "Either set GEMINI_API_KEY environment variable or create .env file\n";
+        exit(1);
+    }
+}
 
 // Prompts for AI summarization
 const STORY_PROMPT = "Create summary of the following page for main topics and insights. Do not rephrase or mention the title in the summary. Limit to 250 words. Return just the summary:\n------\n{content}";
@@ -753,7 +764,21 @@ class StorySummarizer {
         }
 
         $commentsSummaryFile = $this->outputDir . "/{$story['id']}-" . COMMENTS_SUMMARY_FILE;
+        $requestFile = __DIR__ . "/comment_summary_req/{$story['id']}.txt";
+
+        // Only process if comment summary already exists OR there's a request file (user-initiated)
+        if (!file_exists($commentsSummaryFile) && !file_exists($requestFile)) {
+            logMessage("  Skipping comments for story {$story['id']} (no user-initiated request)");
+            return;
+        }
+
         if (file_exists($commentsSummaryFile)) {
+            // Clean up request file if summary already exists (duplicate request)
+            if (file_exists($requestFile)) {
+                unlink($requestFile);
+                logMessage("  Cleaned up duplicate request file for existing summary");
+            }
+
             if ($story['fetched_at'] + 3600 * 72 < time()) {
                 // if it's been more than 72 hours, keep the summary
                 return;
@@ -810,8 +835,14 @@ class StorySummarizer {
                     // Save the comments summary
                     file_put_contents($commentsSummaryFile, $commentsSummary);
                     echo "  Saved {$story['comments_count']} comments summary\n";
+
+                    // Clean up request file if it exists (user-initiated request completed)
+                    if (file_exists($requestFile)) {
+                        unlink($requestFile);
+                        echo "  Cleaned up request file\n";
+                    }
                 }
-                
+
                 // Calculate and display elapsed time
                 $elapsedTime = microtime(true) - $startTime;
                 if ($this->dryRun) {
@@ -826,7 +857,7 @@ class StorySummarizer {
         unset($commentsContent);
         gc_collect_cycles();
     }
-    
+
     /**
      * Run the summarization process
      */
@@ -879,7 +910,7 @@ class StorySummarizer {
             logMessage("Database error: " . $e->getMessage());
         }
     }
-    
+
     /**
      * Process a single story by ID (for debugging purposes)
      */
