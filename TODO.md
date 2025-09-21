@@ -1,4 +1,6 @@
 
+- Add startup directory
+
 - Add stats page
 
 - Add a sitemap.xml
