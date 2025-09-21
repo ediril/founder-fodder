@@ -1,7 +1,7 @@
 <?php
 
 const FETCHER_VERSION = "0.0726.001";
-const SUMMARIZER_VERSION = "0.0921.001";
+const SUMMARIZER_VERSION = "0.0921.002";
 
 const MAX_COMMENTS_TO_FETCH = 2500;
 const MAX_FETCH = 200;                  // 20 pages worth
@@ -129,8 +129,8 @@ function close_db_connection(?PDO $conn): void {
 
 function exit_if_other_process_running(string $lockName, int $timeout = 60 * 2): void {
     if (file_exists(__DIR__ . '/' . $lockName)) {
-        logMessage("{$lockName} is still running");
-        exit(1);
+        logMessage("Another instance of FETCH is already running");
+        exit(0); // Exit successfully since this is expected behavior
     }
 }
 
