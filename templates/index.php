@@ -91,18 +91,18 @@ include __DIR__ . '/partials/hero.php';
                             } 
                             ?>
                             <div class="story-actions">
-                            <?php if (str_contains($excerpt, 'Story is too short to summarize') ||
-                                    str_contains($excerpt, 'Story content not detected') ||
-                                    empty($excerpt)): ?>
+                            <?php if (str_contains($excerpt, 'Story content not detected') || empty($excerpt)): ?>
                                 <a href="<?php echo htmlspecialchars($story['comments_url']); ?>" class="button is-small">
                                     <span>Comments</span>
                                 </a>
                             <?php else: ?>
+                                <?php if (!str_contains($excerpt, 'Story is too short to summarize')): ?>
                                 <p class="story-excerpt">
                                     <?php echo htmlspecialchars($excerpt); ?>
                                 </p>
+                                <?php endif; ?>
                                 <p>
-                                    <a class="button is-small mt-2" 
+                                    <a class="button is-small mt-2"
                                         href="/summary/<?php echo htmlspecialchars($story['id']); ?>"> Read More</a>
                                 </p>
                             <?php endif; ?>
