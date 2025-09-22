@@ -6,7 +6,7 @@ const SUMMARIZER_VERSION = "0.0921.002";
 const MAX_COMMENTS_TO_FETCH = 2500;
 const MAX_FETCH = 200;                  // 20 pages worth
 const MAX_SUMMARIZE = 30;               // 3 pages worth
-const MIN_STORY_LENGTH_FOR_SUMMARY = 200;
+const MIN_STORY_LENGTH_FOR_SUMMARY = 300;
 const DEFAULT_PER_PAGE = 20;
 const CLEANUP_RETENTION_DAYS = 45;
 
