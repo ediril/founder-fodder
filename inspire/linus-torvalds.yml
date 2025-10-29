@@ -1,0 +1,60 @@
+pages:
+  - text_0:
+      - "The shy, solitary Finnish student just wanted a better operating system."
+      - "His 'just-for-fun' hobby from 1991 generated an eventual fortune of over $20 million."
+
+  - text_1:
+      - "Linus Torvalds grew up in Helsinki, Finland."
+      - "He was an awkward, a-religious, self-proclaimed 'ugly child.'"
+      - "Computers were his only real passion, starting on a Commodore VIC-20."
+
+  - text_2:
+      - "He saved up and bought a powerful 386 clone in 1991."
+      - "But he hated the rigid, expensive proprietary software."
+      - "He missed the powerful, flexible UNIX system at his university."
+      - "A new system was needed for his affordable hardware."
+
+  - text_3:
+      - "Torvalds decided to build his own OS kernel."
+      - "He worked obsessively, isolated in his small apartment."
+      - "The project's code started as just a small $\text{I/O}$ program."
+
+  - text_4:
+      - "He posted a message to an online newsgroup that August."
+      - "It was only a 'small project,' a 'hobby,' nothing serious."
+      - "He wanted to name it 'Freax,' a word blending 'free' and 'freak.'"
+      - "His colleague rejected the name, uploading it as 'Linux' instead."
+
+  - text_5:
+      - "Then the unthinkable happened: people cared."
+      - "Developers worldwide wanted to contribute their fixes."
+      - "Torvalds released his creation under the free GNU GPL license."
+
+  - text_6:
+      - "An explosion of open collaboration began immediately."
+      - "Suddenly, the tiny kernel was a credible, stable alternative."
+      - "Companies like Red Hat and VA Linux were soon founded on it."
+      - "The 1999 IPOs briefly made his gifted stock options worth $20 million."
+
+  - text_7:
+      - "Today, Linux runs the modern world's digital infrastructure."
+      - "Every one of the top 500 supercomputers uses Linux."
+      - "It powers $90\%$ of the world's cloud servers and Android phones."
+
+  - text_8:
+      - "His enduring success comes from a simple principle."
+      - "Solve your own pressing problem completely and freely."
+      - "Others will find your pure solution is exactly what they needed."
+      - "Never monetize the code; monetize the expertise and support."
+
+images:
+    - "Linus Torvalds"
+    - "Linus Torvalds 1991"
+
+references:
+  - "Linus Torvalds | Biography, Linux, & Facts | Britannica: https://www.britannica.com/biography/Linus-Torvalds"
+  - "History of Linux - Wikipedia: https://en.wikipedia.org/wiki/History_of_Linux"
+  - "Linus Torvalds - Wikipedia: https://en.wikipedia.org/wiki/Linus_Torvalds"
+  - "Linus Torvalds - Lemelson-MIT: https://lemelson.mit.edu/resources/linus-torvalds"
+  - "On this day in 1991, Linus Torvalds announced he was working on what would become Linux - XDA Developers: https://www.xda-developers.com/on-this-day-in-1991-linus-torvalds-announced-linux/"
+  - "Linus Torvalds: who is the creator of Linux and how much does he earn? - Money.it: https://en.money.it/Linus-Torvalds-who-is-the-creator-of-Linux-and-how-much-does-he-earn"

@@ -6,7 +6,7 @@ _inspire_imgs/
 comment_summary_req/
 content/
 vendor/
-inspire/
+inspire/*/
 
 .DS_Store
 *.db*
