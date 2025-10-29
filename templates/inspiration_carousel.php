@@ -4,35 +4,6 @@ include __DIR__ . '/partials/head.php';
 include __DIR__ . '/partials/hero.php';
 ?>
 
-<style>
-/* Minimal custom styles - only what Bulma doesn't provide */
-.box:hover,
-.image:hover,
-figure:hover {
-    transform: none !important;
-}
-
-.carousel-wrapper {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-    max-width: 800px;
-    margin: 0 auto;
-}
-
-.carousel-container {
-    flex-shrink: 0;
-    max-width: 600px;
-    width: 100%;
-}
-
-/* Override section opacity to preserve image colors */
-.section {
-    opacity: 1 !important;
-}
-</style>
-
 <section class="section">
     <div class="container">
         <div class="carousel-wrapper">
@@ -58,9 +29,21 @@ figure:hover {
         </div>
 
         <div class="has-text-centered mt-4">
+            <button class="button is-light mobile-nav-buttons" onclick="navigate(-1)" aria-label="Previous">
+                <span class="icon">
+                    <i class="fas fa-chevron-left"></i>
+                </span>
+            </button>
+
             <span class="tag is-light is-medium" id="counter">
                 <span id="current-page">1</span> / <span id="total-pages"><?php echo $page_count; ?></span>
             </span>
+
+            <button class="button is-light mobile-nav-buttons" onclick="navigate(1)" aria-label="Next">
+                <span class="icon">
+                    <i class="fas fa-chevron-right"></i>
+                </span>
+            </button>
         </div>
 
         <?php if (!empty($story_text_blocks)): ?>
@@ -117,11 +100,16 @@ function updateImage() {
     imageElement.src = `/inspire/${storyName}/page_${currentPage}.jpg`;
     imageElement.style.visibility = 'visible';
     <?php endif; ?>
+
+    // Update counter
     currentPageElement.textContent = currentPage + 1;
 
-    // Update button states
-    prevBtn.disabled = currentPage === 0;
-    nextBtn.disabled = currentPage === pageCount - 1;
+    // Update all navigation button states (desktop and mobile)
+    const allPrevButtons = document.querySelectorAll('button[aria-label="Previous"]');
+    const allNextButtons = document.querySelectorAll('button[aria-label="Next"]');
+
+    allPrevButtons.forEach(btn => btn.disabled = currentPage === 0);
+    allNextButtons.forEach(btn => btn.disabled = currentPage === pageCount - 1);
 }
 
 function navigate(direction) {

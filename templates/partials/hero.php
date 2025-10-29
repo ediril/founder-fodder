@@ -1,3 +1,9 @@
+<?php
+// Set default active tab if not defined
+if (!isset($active_tab)) {
+    $active_tab = '';
+}
+?>
 <section class="hero is-small">
     <div class="hero-body pb-1">
         <div class="container has-text-centered">
@@ -9,7 +15,7 @@
             <p class="subtitle">
                 For Founders, Makers and Tinkerers
             </p>
-            
+
             <div class="buttons is-centered main-tabs pt-2 mb-2">
                 <a href="/" class="button <?php echo ($active_tab === 'news') ? 'is-primary' : 'is-light'; ?>">
                     <span class="icon">

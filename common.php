@@ -4,7 +4,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 
 use Symfony\Component\Yaml\Yaml;
 
-const FETCHER_VERSION = "0.0726.001";
+const FETCHER_VERSION = "0.1029.001";
 const SUMMARIZER_VERSION = "0.0921.002";
 
 const MAX_COMMENTS_TO_FETCH = 2500;

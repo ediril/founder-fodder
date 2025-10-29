@@ -335,6 +335,10 @@ class HackerNewsFetcher
             $xpath = new \DOMXPath($dom);
 
             $parsedUrl = parse_url($url);
+            // Check if parse_url returned valid scheme and host
+            if (!isset($parsedUrl['scheme']) || !isset($parsedUrl['host'])) {
+                return null;
+            }
             $baseUrl = $parsedUrl['scheme'] . '://' . $parsedUrl['host'];
 
             // Try Open Graph image
@@ -493,6 +497,10 @@ class HackerNewsFetcher
             $xpath = new \DOMXPath($dom);
 
             $parsedUrl = parse_url($url);
+            // Check if parse_url returned valid scheme and host
+            if (!isset($parsedUrl['scheme']) || !isset($parsedUrl['host'])) {
+                return null;
+            }
             $baseUrl = $parsedUrl['scheme'] . '://' . $parsedUrl['host'];
 
             // Try Open Graph image

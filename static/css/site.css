@@ -632,6 +632,50 @@ select:focus {
 }
 
 /* ================================
+   CAROUSEL
+   ================================ */
+/* Prevent hover effects on carousel elements */
+.carousel-wrapper .box:hover,
+.carousel-wrapper .image:hover,
+.carousel-wrapper figure:hover {
+    transform: none !important;
+}
+
+.carousel-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.carousel-container {
+    flex-shrink: 0;
+    max-width: 600px;
+    width: 100%;
+}
+
+/* Disable double-tap zoom on carousel elements (pinch-zoom still works) */
+.carousel-wrapper,
+.carousel-container,
+.carousel-wrapper img,
+.mobile-nav-buttons {
+    touch-action: manipulation;
+}
+
+/* Override section opacity to preserve image colors for carousel */
+.carousel-wrapper ~ .section,
+.carousel-wrapper + .section {
+    opacity: 1 !important;
+}
+
+/* Mobile navigation buttons (hidden by default) */
+.mobile-nav-buttons {
+    display: none;
+}
+
+/* ================================
    UTILITIES
    ================================ */
 .loader-container {
@@ -685,6 +729,56 @@ select:focus {
 
   .dark-mode-toggle:hover {
     transform: translateY(-1px);
+  }
+
+  /* Carousel mobile layout */
+  .carousel-wrapper .button {
+    display: none;
+  }
+
+  .carousel-wrapper {
+    gap: 0;
+  }
+
+  /* Only apply flex layout to carousel counter container on mobile */
+  .carousel-wrapper ~ .has-text-centered {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .mobile-nav-buttons {
+    display: block;
+  }
+
+  /* Remove padding around carousel on mobile for full-width */
+  .section:has(.carousel-wrapper) {
+    padding: 1rem 0;
+  }
+
+  .section:has(.carousel-wrapper) .container {
+    padding-left: 0;
+    padding-right: 0;
+    max-width: 100%;
+  }
+
+  /* Make carousel container full width on mobile */
+  .carousel-container {
+    max-width: 100%;
+  }
+
+  /* Nav buttons sized for easy touch targets */
+  .mobile-nav-buttons {
+    padding: 0.25rem 1rem;
+    font-size: 0.875rem;
+    height: auto;
+    min-width: 50px;
+  }
+
+  .mobile-nav-buttons .icon {
+    width: 1rem;
+    height: 1rem;
   }
 }
 
