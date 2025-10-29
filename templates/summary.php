@@ -77,7 +77,7 @@ include __DIR__ . '/partials/head.php';
                 
                 <?php if ($has_story_summary): ?>
                 <div class="box summary-card mb-6 p-2">
-                    <h2 class="is-4 has-text-weight-bold mb-2">
+                    <h2 class="is-4 has-text-weight-bold my-2">
                         <span class="icon has-text-primary"><i class="fa-regular fa-file-lines"></i></span>
                         Story Summary
                         <a class="is-size-5" href="<?php echo htmlspecialchars($story['url']); ?>">

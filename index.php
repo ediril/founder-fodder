@@ -422,14 +422,17 @@ if ($path === '/' || $path === '/index.php') {
         $per_page = DEFAULT_PER_PAGE;
         $stories = get_page_stories($story_type, $page, $per_page);
         
-        $db = new SQLite3(DB_PATH);
+        $db = get_db_connection();
         // Get last updated time for this story type
-        $result = $db->querySingle("
-            SELECT MAX(s.fetched_at) as max_ts 
-            FROM stories s 
-            INNER JOIN ranks r ON s.id = r.id 
-            WHERE r.type = " . intval(STORY_TYPES[$story_type]), true);
-        $last_updated = $result['max_ts'];
+        $stmt = $db->prepare("
+            SELECT MAX(s.fetched_at) as max_ts
+            FROM stories s
+            INNER JOIN ranks r ON s.id = r.id
+            WHERE r.type = ?");
+        $stmt->execute([STORY_TYPES[$story_type]]);
+        $result = $stmt->fetch();
+        $last_updated = $result['max_ts'] ?? null;
+        close_db_connection($db);
     } else {
         // Get mixed stories for the main page (active stories interspersed with top/best)
         $page = max(1, (int)($_GET['page'] ?? 1));
@@ -437,14 +440,17 @@ if ($path === '/' || $path === '/index.php') {
         // Get mixed stories with page-based pagination
         $stories = get_mixed_stories($page);
         
-        $db = new SQLite3(DB_PATH);
+        $db = get_db_connection();
         // Get last updated time from active stories (main stream)
-        $result = $db->querySingle("
-            SELECT MAX(s.fetched_at) as max_ts 
-            FROM stories s 
-            INNER JOIN ranks r ON s.id = r.id 
-            WHERE r.type = " . intval(STORY_TYPES['active']), true);
-        $last_updated = $result['max_ts'];
+        $stmt = $db->prepare("
+            SELECT MAX(s.fetched_at) as max_ts
+            FROM stories s
+            INNER JOIN ranks r ON s.id = r.id
+            WHERE r.type = ?");
+        $stmt->execute([STORY_TYPES['active']]);
+        $result = $stmt->fetch();
+        $last_updated = $result['max_ts'] ?? null;
+        close_db_connection($db);
     }
 
     // Include the template with stories data and active tab
@@ -459,6 +465,15 @@ if ($path === '/' || $path === '/index.php') {
         exit;
     }
 
+    // Validate CSRF token
+    $csrf_token = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
+    if (!validate_csrf_token($csrf_token)) {
+        http_response_code(403);
+        header('Content-Type: application/json');
+        echo json_encode(['error' => 'Invalid CSRF token']);
+        exit;
+    }
+
     $story_id = $matches[1];
     $request_file = __DIR__ . "/comment_summary_req/{$story_id}.txt";
 
@@ -469,8 +484,8 @@ if ($path === '/' || $path === '/index.php') {
         exit;
     }
 
-    // Rate limiting per IP address
-    $client_ip = $_SERVER['REMOTE_ADDR'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? 'unknown';
+    // Rate limiting per IP address (only trust REMOTE_ADDR to prevent header spoofing)
+    $client_ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
     $ip_hash = md5($client_ip);
     $rate_limit_file = __DIR__ . "/comment_summary_req/_rate_limit_{$ip_hash}";
 
@@ -501,28 +516,50 @@ if ($path === '/' || $path === '/index.php') {
             throw new Exception('Failed to create request file');
         }
 
-        // Trigger summarizer in background
-        $summarizer_cmd = "cd " . escapeshellarg(__DIR__) . " && php summarizer.php --id=" . escapeshellarg($story_id) . " 2>&1";
-        $output = [];
+        // Trigger summarizer in background using proc_open for security
+        $descriptorspec = [
+            0 => ["pipe", "r"],  // stdin
+            1 => ["pipe", "w"],  // stdout
+            2 => ["pipe", "w"]   // stderr
+        ];
+
+        $process = proc_open(
+            [PHP_BINARY, __DIR__ . '/summarizer.php', '--id=' . $story_id],
+            $descriptorspec,
+            $pipes,
+            __DIR__
+        );
+
         $return_var = 0;
-        exec($summarizer_cmd, $output, $return_var);
+        if (is_resource($process)) {
+            // Close stdin
+            fclose($pipes[0]);
+
+            // Read stdout and stderr
+            $stdout = stream_get_contents($pipes[1]);
+            $stderr = stream_get_contents($pipes[2]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+
+            // Get the exit code
+            $return_var = proc_close($process);
+        } else {
+            $return_var = -1;
+        }
 
         header('Content-Type: application/json');
 
         if ($return_var !== 0) {
-            // Log the error output for debugging
-            error_log("Summarizer command failed (exit code: $return_var): " . implode("\n", $output));
+            // Log the error server-side only
+            error_log("Summarizer command failed (exit code: $return_var)");
             echo json_encode([
                 'success' => false,
-                'error' => 'Summarizer failed to start',
-                'debug_output' => $output,
-                'exit_code' => $return_var
+                'error' => 'Summarizer failed to start'
             ]);
         } else {
             echo json_encode([
                 'success' => true,
-                'message' => 'Request submitted successfully',
-                'debug_output' => $output
+                'message' => 'Request submitted successfully'
             ]);
         }
 
@@ -543,16 +580,20 @@ if ($path === '/' || $path === '/index.php') {
     $story_id = $matches[1];
     
     // Get story details from database
-    $db = new SQLite3(DB_PATH);
-    $story = $db->querySingle("SELECT * FROM stories WHERE id = " . intval($story_id), true);
+    $db = get_db_connection();
+    $stmt = $db->prepare("SELECT * FROM stories WHERE id = ?");
+    $stmt->execute([$story_id]);
+    $story = $stmt->fetch();
 
     // Bulletproof validation: ensure we have a valid story array with required fields
     if (!$story || !is_array($story) || !isset($story['id'], $story['title'], $story['timestamp'])) {
+        close_db_connection($db);
         http_response_code(404);
         echo "Story not found";
         exit;
     }
-    
+
+    close_db_connection($db);
     $story['time_ago'] = format_time_ago((int)$story['timestamp']);
     
     // Check if summary files exist
@@ -712,6 +753,22 @@ if ($path === '/' || $path === '/index.php') {
 } elseif (preg_match('/^\/([a-z0-9\-]+)$/', $path, $matches)) {
     // Try to match inspiration story (catch-all for top-level slugs)
     $story_name = $matches[1];
+
+    // Security: Validate against whitelist of actual inspiration story files
+    $allowed_stories = [];
+    $inspiration_files = glob(__DIR__ . '/inspire/*.yml');
+    foreach ($inspiration_files as $file) {
+        $allowed_stories[] = basename($file, '.yml');
+    }
+
+    if (!in_array($story_name, $allowed_stories, true)) {
+        // Not a valid inspiration story, return 404
+        debugLog("404 Not Found: $path (not in whitelist)");
+        http_response_code(404);
+        echo '404 Not Found';
+        exit;
+    }
+
     $yml_file = __DIR__ . '/inspire/' . $story_name . '.yml';
 
     if (file_exists($yml_file)) {

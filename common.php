@@ -349,3 +349,38 @@ function get_blog_post_by_date(string $date_slug): ?array {
     $file_path = __DIR__ . '/_blog_posts/' . $date_slug . '.md';
     return parse_blog_post($file_path);
 }
+
+/**
+ * Generate and store a CSRF token in the session
+ *
+ * @return string The generated CSRF token
+ */
+function generate_csrf_token(): string {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (!isset($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+
+    return $_SESSION['csrf_token'];
+}
+
+/**
+ * Validate a CSRF token from user input
+ *
+ * @param string|null $token The token to validate
+ * @return bool True if valid, false otherwise
+ */
+function validate_csrf_token(?string $token): bool {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (!isset($_SESSION['csrf_token']) || $token === null) {
+        return false;
+    }
+
+    return hash_equals($_SESSION['csrf_token'], $token);
+}

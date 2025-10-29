@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="<?php echo htmlspecialchars(generate_csrf_token()); ?>">
     <title><?php echo htmlspecialchars($page_title ?? 'FounderFodder'); ?></title>
     
     <!-- SEO Meta Tags -->

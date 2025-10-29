@@ -251,10 +251,14 @@ class CommentSummarizationManager {
         this.showLoading(button);
 
         try {
+            // Get CSRF token from meta tag
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
             const response = await fetch(`/create-comment-request/${storyId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken || '',
                 },
             });
 
