@@ -5,6 +5,7 @@ _originals/
 comment_summary_req/
 content/
 vendor/
+inspire/
 
 .DS_Store
 *.db*

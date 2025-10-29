@@ -595,6 +595,33 @@ if ($path === '/' || $path === '/index.php') {
 } elseif ($path === '/blog') {
     include 'templates/blog.php';
 
+} elseif ($path === '/inspiration') {
+    // List all inspiration stories
+    $inspiration_dir = __DIR__ . '/inspire';
+    $people = [];
+
+    if (is_dir($inspiration_dir)) {
+        $files = glob($inspiration_dir . '/*.yml');
+        foreach ($files as $file) {
+            $slug = basename($file, '.yml');
+
+            // Use filename as display name (convert dashes to spaces and title case)
+            $name = ucwords(str_replace('-', ' ', $slug));
+
+            $people[] = [
+                'name' => $name,
+                'slug' => $slug
+            ];
+        }
+
+        // Sort alphabetically by name
+        usort($people, function($a, $b) {
+            return strcmp($a['name'], $b['name']);
+        });
+    }
+
+    include 'templates/inspiration.php';
+
 } elseif ($path === '/favicon.ico') {
     // Handle favicon requests
     $file = 'favicon.ico';
@@ -654,6 +681,83 @@ if ($path === '/' || $path === '/index.php') {
         readfile($file);
     } else {
         debugLog("File not found: $file");
+        http_response_code(404);
+        echo '404 Not Found';
+    }
+} elseif (preg_match('/^\/([a-z0-9\-]+)$/', $path, $matches)) {
+    // Try to match inspiration story (catch-all for top-level slugs)
+    $story_name = $matches[1];
+    $yml_file = __DIR__ . '/inspire/' . $story_name . '.yml';
+
+    if (file_exists($yml_file)) {
+        // Check if images need to be generated
+        require_once __DIR__ . '/generate_inspiration.php';
+
+        $story_dir = __DIR__ . '/inspire/' . $story_name;
+        $needs_generation = false;
+
+        if (!is_dir($story_dir)) {
+            $needs_generation = true;
+        } else {
+            // Check if at least page_0.jpg exists
+            if (!file_exists("$story_dir/page_0.jpg")) {
+                $needs_generation = true;
+            }
+        }
+
+        // Handle generation as a separate API endpoint
+        if ($needs_generation && isset($_GET['gen']) && $_GET['gen'] === '1') {
+            // This is an AJAX/iframe generation request
+            debugLog("Generating images for inspiration story: $story_name");
+            $result = generate_inspiration_story($story_name);
+
+            if (!$result['success']) {
+                debugLog("Failed to generate inspiration story: " . $result['error']);
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => $result['error']]);
+                exit;
+            }
+
+            // Return success
+            echo json_encode(['success' => true]);
+            exit;
+        }
+
+        // Count pages
+        $page_files = glob("$story_dir/page_*.jpg");
+        $page_count = count($page_files);
+
+        // If pages don't exist yet, show carousel with modal
+        if ($page_count === 0 && $needs_generation) {
+            $page_count = 1; // Set to 1 so carousel initializes
+            $show_generation_modal = true;
+        } else {
+            $show_generation_modal = false;
+        }
+
+        if ($page_count === 0) {
+            http_response_code(500);
+            echo "No pages generated for this story";
+            exit;
+        }
+
+        // Parse YAML file to get references and story text
+        $parsed_data = parse_inspiration_yml($yml_file);
+        $references = $parsed_data['references'] ?? [];
+        $story_pages = $parsed_data['pages'] ?? [];
+
+        // Extract all text for SEO
+        $story_text_blocks = [];
+        foreach ($story_pages as $page) {
+            if (!empty($page['text'])) {
+                $story_text_blocks[] = $page['text'];
+            }
+        }
+
+        include 'templates/inspiration_carousel.php';
+    } else {
+        // Handle 404
+        debugLog("404 Not Found: $path");
         http_response_code(404);
         echo '404 Not Found';
     }
