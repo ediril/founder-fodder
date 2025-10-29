@@ -6,13 +6,13 @@
     <title><?php echo htmlspecialchars($page_title ?? 'FounderFodder'); ?></title>
     
     <!-- SEO Meta Tags -->
-    <meta name="description" content="<?php echo htmlspecialchars($page_description ?? 'Inspiration for Founders, Makers and Tinkerers. Curated stories from Hacker News for entrepreneurs and builders.'); ?>">
+    <meta name="description" content="<?php echo htmlspecialchars($page_description ?? 'For Founders, Makers and Tinkerers. Curated stories from Hacker News for entrepreneurs and builders.'); ?>">
     <meta name="keywords" content="founders, entrepreneurs, startups, hacker news, technology, innovation, business">
     <meta name="author" content="FounderFodder">
     
     <!-- Open Graph Meta Tags -->
     <meta property="og:title" content="<?php echo htmlspecialchars($og_title ?? $page_title ?? 'FounderFodder'); ?>">
-    <meta property="og:description" content="<?php echo htmlspecialchars($og_description ?? $page_description ?? 'Inspiration for Founders, Makers and Tinkerers. Curated stories from Hacker News for entrepreneurs and builders.'); ?>">
+    <meta property="og:description" content="<?php echo htmlspecialchars($og_description ?? $page_description ?? 'For Founders, Makers and Tinkerers. Curated stories from Hacker News for entrepreneurs and builders.'); ?>">
     <meta property="og:type" content="<?php echo htmlspecialchars($og_type ?? 'website'); ?>">
     <meta property="og:url" content="<?php echo htmlspecialchars($og_url ?? (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI']); ?>">
     <meta property="og:site_name" content="FounderFodder">
@@ -21,7 +21,7 @@
     <meta property="og:image:alt" content="<?php echo htmlspecialchars($og_image_alt ?? 'FounderFodder'); ?>">
     <?php else: ?>
     <meta property="og:image" content="<?php echo (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . getBasePath(); ?>/founder-fodder-og.jpg">
-    <meta property="og:image:alt" content="FounderFodder - Inspiration for Founders, Makers and Tinkerers">
+    <meta property="og:image:alt" content="FounderFodder - For Founders, Makers and Tinkerers">
     <?php endif; ?>
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
@@ -31,7 +31,7 @@
     <meta name="twitter:site" content="@emrahdma">
     <meta name="twitter:creator" content="@emrahdma">
     <meta name="twitter:title" content="<?php echo htmlspecialchars($og_title ?? $page_title ?? 'FounderFodder'); ?>">
-    <meta name="twitter:description" content="<?php echo htmlspecialchars($og_description ?? $page_description ?? 'Inspiration for Founders, Makers and Tinkerers. Curated stories from Hacker News for entrepreneurs and builders.'); ?>">
+    <meta name="twitter:description" content="<?php echo htmlspecialchars($og_description ?? $page_description ?? 'For Founders, Makers and Tinkerers. Curated stories from Hacker News for entrepreneurs and builders.'); ?>">
     <?php if (!empty($og_image)): ?>
     <meta name="twitter:image" content="<?php echo htmlspecialchars($og_image); ?>">
     <?php else: ?>

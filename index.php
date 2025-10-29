@@ -404,9 +404,9 @@ function asset_url(string $path): string {
 
 // Handle requests
 if ($path === '/' || $path === '/index.php') {
-    // Get the active tab (news is default)
-    $active_tab = $_GET['tab'] ?? 'news';
-    
+    // News section - set active tab
+    $active_tab = 'news';
+
     // Check if a specific story type is requested
     $story_type = $_GET['type'] ?? null;
     
@@ -429,7 +429,7 @@ if ($path === '/' || $path === '/index.php') {
             INNER JOIN ranks r ON s.id = r.id 
             WHERE r.type = " . intval(STORY_TYPES[$story_type]), true);
         $last_updated = $result['max_ts'];
-    } elseif ($active_tab === 'news') {
+    } else {
         // Get mixed stories for the main page (active stories interspersed with top/best)
         $page = max(1, (int)($_GET['page'] ?? 1));
         
@@ -580,7 +580,10 @@ if ($path === '/' || $path === '/index.php') {
         $comments_summary = file_get_contents($comments_summary_file);
         $comments_summary_last_updated = format_time_ago(filectime($comments_summary_file));
     }
-    
+
+    // News section - set active tab
+    $active_tab = 'news';
+
     include 'templates/summary.php';
 
 } elseif ($path === '/about') {
@@ -619,6 +622,9 @@ if ($path === '/' || $path === '/index.php') {
             return strcmp($a['name'], $b['name']);
         });
     }
+
+    // Inspiration section - set active tab
+    $active_tab = 'inspiration';
 
     include 'templates/inspiration.php';
 
@@ -753,6 +759,9 @@ if ($path === '/' || $path === '/index.php') {
                 $story_text_blocks[] = $page['text'];
             }
         }
+
+        // Inspiration section - set active tab
+        $active_tab = 'inspiration';
 
         include 'templates/inspiration_carousel.php';
     } else {

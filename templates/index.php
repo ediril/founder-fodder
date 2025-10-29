@@ -121,7 +121,7 @@ include __DIR__ . '/partials/hero.php';
                     if ($story_type && in_array($story_type, ['top', 'new', 'active', 'best'])) {
                         $pagination_url = "/?type=" . urlencode($story_type) . "&page=" . (int)$stories['pagination']['next_page'];
                     } else {
-                        $pagination_url = "/?tab=news&page=" . (int)$stories['pagination']['next_page'];
+                        $pagination_url = "/?page=" . (int)$stories['pagination']['next_page'];
                     }
                     ?>
                     <a href="<?php echo htmlspecialchars($pagination_url); ?>" 
