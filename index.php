@@ -5,6 +5,7 @@ require_once __DIR__ . '/banalytiq/banalytiq.php';
 record_visit();
 
 require_once __DIR__ . '/common.php';
+require_once __DIR__ . '/markdown_parser.php';
 
 /**
  * Format timestamp as 'time ago'
@@ -596,7 +597,25 @@ if ($path === '/' || $path === '/index.php') {
     include 'templates/privacy.php';
 
 } elseif ($path === '/blog') {
+    // List all blog posts
+    $posts = get_all_blog_posts();
     include 'templates/blog.php';
+
+} elseif (preg_match('/^\/blog\/(\d{4}-\d{2}-\d{2})$/', $path, $matches)) {
+    // Individual blog post
+    $date_slug = $matches[1];
+    $post = get_blog_post_by_date($date_slug);
+
+    if (!$post) {
+        http_response_code(404);
+        echo '404 Not Found';
+        exit;
+    }
+
+    // Parse markdown content to HTML
+    $post['html_content'] = parse_markdown($post['content']);
+
+    include 'templates/blog_post.php';
 
 } elseif ($path === '/inspiration') {
     // List all inspiration stories

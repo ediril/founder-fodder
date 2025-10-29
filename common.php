@@ -1,5 +1,9 @@
 <?php
 
+require_once __DIR__ . '/vendor/autoload.php';
+
+use Symfony\Component\Yaml\Yaml;
+
 const FETCHER_VERSION = "0.0726.001";
 const SUMMARIZER_VERSION = "0.0921.002";
 
@@ -261,6 +265,87 @@ function createUtf8DOMDocument(string $html): DOMDocument
     libxml_use_internal_errors(true);
     @$dom->loadHTML($html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
     libxml_clear_errors();
-    
+
     return $dom;
+}
+
+/**
+ * Parse a blog post markdown file with YAML frontmatter
+ *
+ * @param string $file_path Path to the markdown file
+ * @return array|null Array with keys: title, date, excerpt, content, slug, or null if parsing fails
+ */
+function parse_blog_post(string $file_path): ?array {
+    if (!file_exists($file_path)) {
+        return null;
+    }
+
+    $content = file_get_contents($file_path);
+
+    // Check for YAML frontmatter (--- at start and end)
+    if (!preg_match('/^---\s*\n(.*?)\n---\s*\n(.*)$/s', $content, $matches)) {
+        return null;
+    }
+
+    $frontmatter_yaml = $matches[1];
+    $markdown_content = trim($matches[2]);
+
+    try {
+        $frontmatter = Yaml::parse($frontmatter_yaml);
+    } catch (Exception $e) {
+        return null;
+    }
+
+    // Extract slug from filename (YYYY-MM-DD.md)
+    $filename = basename($file_path, '.md');
+
+    return [
+        'title' => $frontmatter['title'] ?? 'Untitled',
+        'date' => $frontmatter['date'] ?? $filename,
+        'excerpt' => $frontmatter['excerpt'] ?? '',
+        'content' => $markdown_content,
+        'slug' => $filename,
+        'file_path' => $file_path
+    ];
+}
+
+/**
+ * Get all blog posts from _blog_posts/ directory
+ *
+ * @return array Array of blog posts sorted by date (newest first)
+ */
+function get_all_blog_posts(): array {
+    $blog_dir = __DIR__ . '/_blog_posts';
+
+    if (!is_dir($blog_dir)) {
+        return [];
+    }
+
+    $posts = [];
+    $files = glob($blog_dir . '/*.md');
+
+    foreach ($files as $file) {
+        $post = parse_blog_post($file);
+        if ($post) {
+            $posts[] = $post;
+        }
+    }
+
+    // Sort by date (oldest first)
+    usort($posts, function($a, $b) {
+        return strcmp($a['date'], $b['date']);
+    });
+
+    return $posts;
+}
+
+/**
+ * Get a specific blog post by date slug
+ *
+ * @param string $date_slug Date in format YYYY-MM-DD
+ * @return array|null Blog post data or null if not found
+ */
+function get_blog_post_by_date(string $date_slug): ?array {
+    $file_path = __DIR__ . '/_blog_posts/' . $date_slug . '.md';
+    return parse_blog_post($file_path);
 }
