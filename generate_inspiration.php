@@ -16,6 +16,7 @@ use Symfony\Component\Yaml\Yaml;
 
 // Configuration
 define('INSPIRATION_DIR', 'inspire');
+define('ORIGINAL_IMAGES_DIR', '_inspire_imgs');
 
 // Control whether to show logs (enabled for CLI, disabled for web)
 $GLOBALS['ENABLE_LOGS'] = php_sapi_name() === 'cli';
@@ -106,8 +107,7 @@ function parse_inspiration_yml(string $file_path): array {
                     }
                     // Remove contentReference patterns from Claude Code
                     $text = preg_replace('/:contentReference\[.*?\]\{.*?\}/', '', $text);
-                    // Remove LaTeX formatting: $...$, \text{...}, \%, etc.
-                    $text = preg_replace('/\$([^$]+)\$/', '$1', $text); // Remove $ delimiters
+                    // Remove LaTeX formatting: \text{...}, \%, etc.
                     $text = preg_replace('/\\\\text\{([^}]+)\}/', '$1', $text); // Remove \text{...}
                     $text = str_replace('\\%', '%', $text); // Unescape \%
                     $text = str_replace('\\$', '$', $text); // Unescape \$
@@ -216,6 +216,98 @@ function download_image(string $url, string $save_path): bool {
     }
 
     return true;
+}
+
+/**
+ * Calculate a simple perceptual hash for an image to detect similar images
+ * Returns a hash string that will be similar for visually similar images
+ *
+ * @param string $image_path Path to image file
+ * @return string|false Perceptual hash or false on error
+ */
+function calculate_perceptual_hash(string $image_path) {
+    // Load image
+    $image_info = getimagesize($image_path);
+    if ($image_info === false) {
+        return false;
+    }
+
+    $mime_type = $image_info['mime'];
+
+    // Create image resource based on type
+    switch ($mime_type) {
+        case 'image/jpeg':
+            $img = @imagecreatefromjpeg($image_path);
+            break;
+        case 'image/png':
+            $img = @imagecreatefrompng($image_path);
+            break;
+        case 'image/gif':
+            $img = @imagecreatefromgif($image_path);
+            break;
+        case 'image/webp':
+            $img = @imagecreatefromwebp($image_path);
+            break;
+        default:
+            return false;
+    }
+
+    if ($img === false) {
+        return false;
+    }
+
+    // Resize to small fixed size (8x8) for comparison
+    $small = imagecreatetruecolor(8, 8);
+    imagecopyresampled($small, $img, 0, 0, 0, 0, 8, 8, imagesx($img), imagesy($img));
+
+    // Convert to grayscale and get average
+    $pixels = [];
+    $total = 0;
+    for ($y = 0; $y < 8; $y++) {
+        for ($x = 0; $x < 8; $x++) {
+            $rgb = imagecolorat($small, $x, $y);
+            $r = ($rgb >> 16) & 0xFF;
+            $g = ($rgb >> 8) & 0xFF;
+            $b = $rgb & 0xFF;
+            $gray = (int)(($r + $g + $b) / 3);
+            $pixels[] = $gray;
+            $total += $gray;
+        }
+    }
+    $average = $total / 64;
+
+    // Create hash based on whether each pixel is above or below average
+    $hash = '';
+    foreach ($pixels as $pixel) {
+        $hash .= ($pixel >= $average) ? '1' : '0';
+    }
+
+    imagedestroy($img);
+    imagedestroy($small);
+
+    return $hash;
+}
+
+/**
+ * Calculate Hamming distance between two binary strings
+ * Returns number of positions where bits differ
+ *
+ * @param string $hash1 First hash
+ * @param string $hash2 Second hash
+ * @return int Hamming distance
+ */
+function hamming_distance(string $hash1, string $hash2): int {
+    if (strlen($hash1) !== strlen($hash2)) {
+        return PHP_INT_MAX; // Completely different
+    }
+
+    $distance = 0;
+    for ($i = 0; $i < strlen($hash1); $i++) {
+        if ($hash1[$i] !== $hash2[$i]) {
+            $distance++;
+        }
+    }
+    return $distance;
 }
 
 /**
@@ -625,13 +717,12 @@ function overlay_text_on_image(string $image_path, string $text, string $output_
     $line_height = (int)($font_size * 1.5); // Slightly tighter line spacing
     $padding_left = (int)($width * 0.08); // 8% left padding
     $padding_right = (int)($width * 0.08); // 8% right padding
-    $padding_bottom = (int)($height * 0.08); // 8% bottom padding to prevent cutoff
+    $padding_bottom = (int)($height * 0.01); // 8% bottom padding to prevent cutoff
     $max_text_width = $width - $padding_left - $padding_right;
 
-    // Try to use a bold sans-serif font (similar to Instagram)
+    // Try to use Inter font (modern, clean sans-serif)
     $font_paths = [
-        '/System/Library/Fonts/Supplemental/Arial Bold.ttf',
-        '/System/Library/Fonts/Helvetica.ttc',
+        '/Users/ediril/Library/Fonts/Inter-VariableFont_opsz,wght.ttf',
         '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
         '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf',
     ];
@@ -660,7 +751,7 @@ function overlay_text_on_image(string $image_path, string $text, string $output_
     // Helper function to calculate text layout for a given font size
     $calculate_layout = function($test_font_size) use ($sentences, $font_file, $max_text_width, &$sentence_count) {
         // Reduce line height for 3+ sentences to fit larger fonts
-        $line_height_multiplier = ($sentence_count >= 3) ? 1.4 : 1.5;
+        $line_height_multiplier = ($sentence_count > 3) ? 1.4 : 1.5;
         $test_line_height = (int)($test_font_size * $line_height_multiplier);
         $total_height = 0;
         $temp_sentence_count = 0;
@@ -724,52 +815,28 @@ function overlay_text_on_image(string $image_path, string $text, string $output_
 
     // Hardcoded position and font size by sentence count for easy adjustment
     $positioning = [
-        1 => ['start' => 0.78, 'max_font' => 0.059],
-        2 => ['start' => 0.70, 'max_font' => 0.055],  // Higher position for bigger font
-        3 => ['start' => 0.66, 'max_font' => 0.053],  // Lower position, smaller font
-        4 => ['start' => 0.60, 'max_font' => 0.049],  // Even lower
-        5 => ['start' => 0.55, 'max_font' => 0.045],  // Lowest
+        1 => ['start' => 0.78, 'font_size' => 42],  // Direct pixel font sizes
+        2 => ['start' => 0.65, 'font_size' => 38],
+        3 => ['start' => 0.62, 'font_size' => 35],
+        4 => ['start' => 0.55, 'font_size' => 33],
+        5 => ['start' => 0.54, 'font_size' => 28],
     ];
 
     // Use config for this sentence count, or default to 5+ if more
     $config = $positioning[$sentence_count] ?? $positioning[5];
     $text_start_position = $config['start'];
-    $max_font_multiplier = $config['max_font'];
+    $font_size = $config['font_size'];
 
-    // Available height is from where text WILL start to the bottom
-    $text_will_start_at = (int)($height * $text_start_position);
-    $available_height = $black_region_end - $text_will_start_at;
-
-    // Font size range
-    $min_font_size = (int)($width * 0.025);
-    $max_font_size = (int)($width * $max_font_multiplier);
-
-    // Find the LARGEST font size that fits
-    $best_font_size = $min_font_size;
-    for ($test_size = $max_font_size; $test_size >= $min_font_size; $test_size -= 1) {
-        $result = $calculate_layout($test_size);
-        if ($result['total_height'] <= $available_height) {
-            $best_font_size = $test_size;
-            break; // Found the largest that fits
-        }
-    }
-
-    // Use the optimal font size
-    $layout = $calculate_layout($best_font_size);
-    $font_size = $best_font_size;
+    // Calculate layout with the hardcoded font size (no formula, no searching)
+    $layout = $calculate_layout($font_size);
     $line_height = $layout['line_height'];
     $total_text_height = $layout['total_height'];
     $sentence_data = $layout['layout_data'];
 
-    log_message("  Optimal font size: $font_size (height: $total_text_height / $available_height available)\n");
+    log_message("  Using font size: $font_size (height: $total_text_height)\n");
 
-    // Apply the hardcoded position (already calculated above)
+    // Apply the hardcoded position directly
     $start_y = (int)($height * $text_start_position);
-
-    // Ensure text fits without cutting off bottom
-    if ($start_y + $total_text_height > $black_region_end) {
-        $start_y = $black_region_end - $total_text_height;
-    }
 
     // Pure white text color for maximum contrast
     $text_color = imagecolorallocate($image, 255, 255, 255);
@@ -803,22 +870,16 @@ function overlay_text_on_image(string $image_path, string $text, string $output_
             imagettftext($image, $font_size, 0, $padding_left + 2, $current_y + 2, $shadow_strong, $font_file, $line);
             imagettftext($image, $font_size, 0, $padding_left + 1, $current_y + 1, $shadow_strong, $font_file, $line);
 
-            // Main text - pure white
-            imagettftext(
-                $image,
-                $font_size,
-                0,
-                $padding_left,
-                $current_y,
-                $text_color,
-                $font_file,
-                $line
-            );
+            // Main text - pure white with bold effect
+            // Render multiple times with slight offset for bold appearance
+            imagettftext($image, $font_size, 0, $padding_left, $current_y, $text_color, $font_file, $line);
+            imagettftext($image, $font_size, 0, $padding_left + 1, $current_y, $text_color, $font_file, $line);
+            imagettftext($image, $font_size, 0, $padding_left + 2, $current_y, $text_color, $font_file, $line);
 
             $current_y += $line_height;
         }
 
-        $current_y += (int)($line_height * 0.5); // Space after sentence
+        $current_y += (int)($line_height * 0.75); // Space after sentence
     }
 
     // Save as JPEG
@@ -852,6 +913,12 @@ function generate_inspiration_story(string $story_name): array {
         mkdir($output_dir, 0755, true);
     }
 
+    // Create original images directory for this story
+    $original_images_dir = "$base_dir/" . ORIGINAL_IMAGES_DIR . "/$story_name";
+    if (!is_dir($original_images_dir)) {
+        mkdir($original_images_dir, 0755, true);
+    }
+
     try {
         // Parse the yml file
         log_message("Parsing $yml_file...\n");
@@ -860,37 +927,71 @@ function generate_inspiration_story(string $story_name): array {
         $search_phrases = $parsed_data['search_phrases'];
         log_message("Found " . count($pages) . " pages\n");
 
-        // Search for images using Google Images (get 3x pages for retry pool)
-        $image_urls = [];
-        if (!empty($search_phrases)) {
-            log_message("Searching for images using " . count($search_phrases) . " search phrases...\n");
-            $num_images_needed = count($pages) * 3; // 3x for retry pool
-            $image_urls = search_google_images($search_phrases, $num_images_needed);
-
-            if (empty($image_urls)) {
-                throw new Exception("Failed to find any images from Google search");
-            } else {
-                log_message("Successfully retrieved " . count($image_urls) . " image URLs for " . count($pages) . " pages\n");
-            }
-        } else {
-            throw new Exception("No search phrases found in YAML file");
-        }
-
-        // Track which images we've used (both URLs and content hashes)
+        // Track which images we've used (URLs, MD5 hashes, and perceptual hashes)
         $image_index = 0;
         $used_urls = [];
-        $used_hashes = [];
+        $used_md5_hashes = [];
+        $used_perceptual_hashes = [];
+
+        // Load hashes of all existing cached images to prevent duplicates
+        foreach ($pages as $page) {
+            $page_num = $page['page_number'];
+            $original_image = "$original_images_dir/$page_num.jpg";
+            if (file_exists($original_image)) {
+                // MD5 hash for exact duplicates
+                $existing_md5 = md5_file($original_image);
+                $used_md5_hashes[] = $existing_md5;
+
+                // Perceptual hash for similar images (different crops/sizes)
+                $existing_phash = calculate_perceptual_hash($original_image);
+                if ($existing_phash !== false) {
+                    $used_perceptual_hashes[] = $existing_phash;
+                }
+
+                log_message("Loaded hashes for existing image $page_num\n");
+            }
+        }
+
+        // Determine if we need to fetch new images
+        $needs_image_download = false;
+        foreach ($pages as $page) {
+            $page_num = $page['page_number'];
+            $original_image = "$original_images_dir/$page_num.jpg";
+            if (!file_exists($original_image)) {
+                $needs_image_download = true;
+                break;
+            }
+        }
+
+        // Search for images only if we need to download some
+        $image_urls = [];
+        if ($needs_image_download) {
+            if (!empty($search_phrases)) {
+                log_message("Searching for images using " . count($search_phrases) . " search phrases...\n");
+                $num_images_needed = count($pages) * 3; // 3x for retry pool
+                $image_urls = search_google_images($search_phrases, $num_images_needed);
+
+                if (empty($image_urls)) {
+                    throw new Exception("Failed to find any images from Google search");
+                } else {
+                    log_message("Successfully retrieved " . count($image_urls) . " image URLs for " . count($pages) . " pages\n");
+                }
+            } else {
+                throw new Exception("No search phrases found in YAML file");
+            }
+        }
 
         // Process each page
-        foreach ($pages as $page_index => $page) {
+        foreach ($pages as $page) {
             $page_num = $page['page_number'];
             $text = $page['text'];
 
             log_message("Processing page $page_num...\n");
 
-            // Download original image
-            $temp_image = "$output_dir/temp_$page_num.jpg";
+            // Define paths
+            $original_image = "$original_images_dir/$page_num.jpg";
             $final_image = "$output_dir/page_$page_num.jpg";
+            $temp_image = "$output_dir/temp_$page_num.jpg";
 
             // Skip if final image already exists
             if (file_exists($final_image)) {
@@ -898,45 +999,78 @@ function generate_inspiration_story(string $story_name): array {
                 continue;
             }
 
-            // Try to download a unique image, with retries from the pool
-            $download_success = false;
-            $attempts = 0;
-            $max_attempts = min(20, count($image_urls) - $image_index); // Try up to 20 images or until pool exhausted
+            // Check if we have cached original image
+            if (file_exists($original_image)) {
+                log_message("  Using cached original image\n");
+                // Use cached original
+                copy($original_image, $temp_image);
+            } else {
+                // Download a new unique image
+                log_message("  Downloading new image...\n");
+                $download_success = false;
+                $attempts = 0;
+                $max_attempts = min(20, count($image_urls) - $image_index);
 
-            while (!$download_success && $attempts < $max_attempts && $image_index < count($image_urls)) {
-                $image_url = $image_urls[$image_index];
-                $image_index++;
-                $attempts++;
+                while (!$download_success && $attempts < $max_attempts && $image_index < count($image_urls)) {
+                    $image_url = $image_urls[$image_index];
+                    $image_index++;
+                    $attempts++;
 
-                // Skip if we've already used this URL
-                if (in_array($image_url, $used_urls)) {
-                    log_message("  Skipping duplicate URL (attempt $attempts)\n");
-                    continue;
-                }
-
-                log_message("  Attempt $attempts: Downloading from $image_url...\n");
-                if (download_image($image_url, $temp_image)) {
-                    // Check if this is a duplicate image by content hash
-                    $image_hash = md5_file($temp_image);
-
-                    if (in_array($image_hash, $used_hashes)) {
-                        log_message("  Duplicate image content detected, trying next...\n");
-                        @unlink($temp_image);
+                    // Skip if we've already used this URL
+                    if (in_array($image_url, $used_urls)) {
+                        log_message("  Skipping duplicate URL (attempt $attempts)\n");
                         continue;
                     }
 
-                    // Success - unique image found
-                    $download_success = true;
-                    $used_urls[] = $image_url;
-                    $used_hashes[] = $image_hash;
-                    log_message("  Successfully downloaded unique image\n");
-                } else {
-                    log_message("  Failed, trying next image...\n");
-                }
-            }
+                    log_message("  Attempt $attempts: Downloading from $image_url...\n");
+                    if (download_image($image_url, $temp_image)) {
+                        // Check MD5 hash for exact duplicates
+                        $image_md5 = md5_file($temp_image);
+                        if (in_array($image_md5, $used_md5_hashes)) {
+                            log_message("  Duplicate image (exact match) detected, trying next...\n");
+                            @unlink($temp_image);
+                            continue;
+                        }
 
-            if (!$download_success) {
-                throw new Exception("Failed to download any unique image for page $page_num after $attempts attempts");
+                        // Check perceptual hash for similar images (crops, resizes)
+                        $image_phash = calculate_perceptual_hash($temp_image);
+                        if ($image_phash !== false) {
+                            $is_similar = false;
+                            foreach ($used_perceptual_hashes as $existing_phash) {
+                                $distance = hamming_distance($image_phash, $existing_phash);
+                                // Threshold: if <= 10 bits differ out of 64, consider it similar
+                                // (allows for minor crops/compression differences)
+                                if ($distance <= 10) {
+                                    $is_similar = true;
+                                    log_message("  Similar image detected (distance: $distance), trying next...\n");
+                                    break;
+                                }
+                            }
+                            if ($is_similar) {
+                                @unlink($temp_image);
+                                continue;
+                            }
+                        }
+
+                        // Success - unique image found
+                        $download_success = true;
+                        $used_urls[] = $image_url;
+                        $used_md5_hashes[] = $image_md5;
+                        if ($image_phash !== false) {
+                            $used_perceptual_hashes[] = $image_phash;
+                        }
+
+                        // Save original image to cache
+                        copy($temp_image, $original_image);
+                        log_message("  Successfully downloaded and cached unique image\n");
+                    } else {
+                        log_message("  Failed, trying next image...\n");
+                    }
+                }
+
+                if (!$download_success) {
+                    throw new Exception("Failed to download any unique image for page $page_num after $attempts attempts");
+                }
             }
 
             log_message("  Overlaying text...\n");

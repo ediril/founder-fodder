@@ -35,15 +35,6 @@ figure:hover {
 
 <section class="section">
     <div class="container">
-        <div class="has-text-centered mb-5">
-            <a href="/inspiration" class="button is-light">
-                <span class="icon">
-                    <i class="fas fa-arrow-left"></i>
-                </span>
-                <span>Back to Inspiration</span>
-            </a>
-        </div>
-
         <div class="carousel-wrapper">
             <button class="button is-light" id="prev-btn" onclick="navigate(-1)" aria-label="Previous">
                 <span class="icon">
