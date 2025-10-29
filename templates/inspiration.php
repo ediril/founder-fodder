@@ -7,7 +7,7 @@ include __DIR__ . '/partials/hero.php';
     <div class="container">
         <div class="content is-medium">
             <div class="box">
-                <h1 class="title is-3">Inspirational Stories</h1>
+                <h1 class="title is-3 is-size-4-mobile">Inspirational Stories</h1>
                 <?php if (empty($people)): ?>
                     <p class="has-text-grey">No stories available yet.</p>
                 <?php else: ?>

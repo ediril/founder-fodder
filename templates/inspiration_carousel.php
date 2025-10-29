@@ -4,6 +4,14 @@ include __DIR__ . '/partials/head.php';
 include __DIR__ . '/partials/hero.php';
 ?>
 
+<section class="section pt-5 pb-0">
+    <div class="container">
+        <h1 class="title is-2 is-size-4-mobile has-text-centered">
+            The <?php echo htmlspecialchars(ucwords(str_replace('-', ' ', $story_name))); ?> Story
+        </h1>
+    </div>
+</section>
+
 <section class="section">
     <div class="container">
         <div class="carousel-wrapper">
@@ -48,7 +56,6 @@ include __DIR__ . '/partials/hero.php';
 
         <?php if (!empty($story_text_blocks)): ?>
         <div class="box mt-6">
-            <h3 class="title is-5">Full Story</h3>
             <div class="content is-medium">
                 <?php foreach ($story_text_blocks as $text_block): ?>
                     <p><?php echo htmlspecialchars(str_replace("\n", " ", $text_block)); ?></p>

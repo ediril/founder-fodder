@@ -713,6 +713,11 @@ select:focus {
     font-size: 1.5rem;
   }
 
+  /* Reduce section padding on mobile for more content visibility */
+  .section {
+    padding: 1rem 0.75rem;
+  }
+
   .dark-mode-toggle {
     top: 15px !important;
     right: 15px !important;
