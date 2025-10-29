@@ -9,7 +9,7 @@ pages:
       - "Computers were his only real passion, starting on a Commodore VIC-20."
 
   - text_2:
-      - "He saved up and bought a powerful 386 clone in 1991."
+      - "He saved up and bought a powerful 386 AT clone in 1991."
       - "But he hated the rigid, expensive proprietary software."
       - "He missed the powerful, flexible UNIX system at his university."
       - "A new system was needed for his affordable hardware."
@@ -17,7 +17,7 @@ pages:
   - text_3:
       - "Torvalds decided to build his own OS kernel."
       - "He worked obsessively, isolated in his small apartment."
-      - "The project's code started as just a small $\text{I/O}$ program."
+      - "The project's code started as just a small I/O program."
 
   - text_4:
       - "He posted a message to an online newsgroup that August."
@@ -39,7 +39,7 @@ pages:
   - text_7:
       - "Today, Linux runs the modern world's digital infrastructure."
       - "Every one of the top 500 supercomputers uses Linux."
-      - "It powers $90\%$ of the world's cloud servers and Android phones."
+      - "It powers 90% of the world's cloud servers and Android phones."
 
   - text_8:
       - "His enduring success comes from a simple principle."
