@@ -111,6 +111,10 @@ function parse_inspiration_yml(string $file_path): array {
                     $text = preg_replace('/\\\\text\{([^}]+)\}/', '$1', $text); // Remove \text{...}
                     $text = str_replace('\\%', '%', $text); // Unescape \%
                     $text = str_replace('\\$', '$', $text); // Unescape \$
+                    // Replace em dashes with commas
+                    $text = str_replace(['—', '–'], ',', $text);
+                    // Remove trailing periods from each line
+                    $text = preg_replace('/\.\s*$/m', '', $text);
                     $text = trim($text);
                 }
             }
@@ -148,6 +152,10 @@ function parse_inspiration_yml(string $file_path): array {
                 $text = preg_replace('/\\\\text\{([^}]+)\}/', '$1', $text); // Remove \text{...}
                 $text = str_replace('\\%', '%', $text); // Unescape \%
                 $text = str_replace('\\$', '$', $text); // Unescape \$
+                // Replace em dashes with commas
+                $text = str_replace(['—', '–'], ',', $text);
+                // Remove trailing periods from each line
+                $text = preg_replace('/\.\s*$/m', '', $text);
                 $pages[$page_num]['text'] = trim($text);
             }
         }
@@ -607,9 +615,9 @@ function search_google_images(array $search_phrases, int $num_results): array {
  * @return bool Success
  */
 function overlay_text_on_image(string $image_path, string $text, string $output_path): bool {
-    // Instagram square post dimensions
+    // Instagram portrait post dimensions (4:5 ratio - more vertical space for text)
     $target_width = 1080;
-    $target_height = 1080;
+    $target_height = 1350;
 
     // Load image
     $image_info = getimagesize($image_path);
@@ -655,7 +663,7 @@ function overlay_text_on_image(string $image_path, string $text, string $output_
 
     // Calculate aspect ratios
     $src_aspect = $src_width / $src_height;
-    $target_aspect = 1.0; // Instagram square
+    $target_aspect = $target_width / $target_height; // 4:5 portrait ratio
 
     // Resize to fit width, pad bottom if needed
     $new_width = $target_width;
@@ -689,12 +697,13 @@ function overlay_text_on_image(string $image_path, string $text, string $output_
     // Enable alpha blending for gradient overlay
     imagealphablending($image, true);
 
-    // Apply black gradient starting lower to show more of the image
-    // - 45% to 57.5%: fade from 100% transparent to 100% opaque
-    // - 57.5% to 100%: stay 100% opaque black
-    // This ensures text area has solid black background even with padding
-    $gradient_start = (int)($height * 0.40); // Start gradient
-    $gradient_full_opacity = (int)($height * 0.60); // Full opacity by 57.5%
+    // Apply black gradient - more aggressive for better text readability
+    // With taller image (4:5 ratio), balance between showing image and text space
+    // - 35% to 50%: fade from 100% transparent to 100% opaque (stronger gradient)
+    // - 50% to 100%: stay 100% opaque black
+    // This gives more room for text with a more visible gradient
+    $gradient_start = (int)($height * 0.35); // Start gradient at 35%
+    $gradient_full_opacity = (int)($height * 0.50); // Full opacity by 50%
 
     for ($y = $gradient_start; $y < $height; $y++) {
         if ($y >= $gradient_full_opacity) {
@@ -802,8 +811,9 @@ function overlay_text_on_image(string $image_path, string $text, string $output_
     };
 
     // Calculate available space (from solid black region to bottom with padding)
-    $black_region_start = (int)($height * 0.575); // 57.5% where black is solid
+    $black_region_start = (int)($height * 0.50); // 50% where black is solid
     $black_region_end = $height - $padding_bottom;
+    $available_height = $black_region_end - $black_region_start;
 
     // Get sentence count first (quick pass)
     $sentence_count = 0;
@@ -813,30 +823,56 @@ function overlay_text_on_image(string $image_path, string $text, string $output_
         }
     }
 
-    // Hardcoded position and font size by sentence count for easy adjustment
-    $positioning = [
-        1 => ['start' => 0.78, 'font_size' => 42],  // Direct pixel font sizes
-        2 => ['start' => 0.65, 'font_size' => 38],
-        3 => ['start' => 0.62, 'font_size' => 35],
-        4 => ['start' => 0.55, 'font_size' => 33],
-        5 => ['start' => 0.54, 'font_size' => 28],
+    // Smart font size selection based on sentence count (starting point)
+    $base_font_sizes = [
+        1 => 46,
+        2 => 42,
+        3 => 38,
+        4 => 35,
+        5 => 32,
     ];
+    $font_size = $base_font_sizes[$sentence_count] ?? 30;
 
-    // Use config for this sentence count, or default to 5+ if more
-    $config = $positioning[$sentence_count] ?? $positioning[5];
-    $text_start_position = $config['start'];
-    $font_size = $config['font_size'];
-
-    // Calculate layout with the hardcoded font size (no formula, no searching)
+    // Calculate initial layout
     $layout = $calculate_layout($font_size);
-    $line_height = $layout['line_height'];
     $total_text_height = $layout['total_height'];
+
+    // If text is too tall for available space, reduce font size
+    $max_iterations = 10;
+    $iteration = 0;
+    while ($total_text_height > ($available_height * 0.95) && $iteration < $max_iterations && $font_size > 24) {
+        $font_size -= 2; // Reduce by 2px
+        $layout = $calculate_layout($font_size);
+        $total_text_height = $layout['total_height'];
+        $iteration++;
+    }
+
+    $line_height = $layout['line_height'];
     $sentence_data = $layout['layout_data'];
 
-    log_message("  Using font size: $font_size (height: $total_text_height)\n");
+    log_message("  Sentence count: $sentence_count, Font size: $font_size, Text height: $total_text_height, Available: $available_height\n");
 
-    // Apply the hardcoded position directly
-    $start_y = (int)($height * $text_start_position);
+    // Smart vertical positioning based on actual text height
+    // Position text so it's centered in the bottom half with some bias toward bottom
+    $padding_top = (int)($available_height * 0.10); // 10% padding from top of black region
+    $padding_bottom_text = (int)($available_height * 0.15); // 15% padding from bottom
+
+    // Calculate starting position to center text with bottom bias
+    $text_space_start = $black_region_start + $padding_top;
+    $text_space_end = $black_region_end - $padding_bottom_text;
+    $text_space_height = $text_space_end - $text_space_start;
+
+    // If text fits comfortably, position it nicely centered with slight bottom bias
+    // If text is tight, push it higher to ensure it all fits
+    if ($total_text_height < ($text_space_height * 0.7)) {
+        // Plenty of room - center more in the black area
+        $start_y = $text_space_start + (int)(($text_space_height - $total_text_height) * 0.5);
+    } else {
+        // Tighter fit - use available space more efficiently
+        $start_y = $text_space_start + (int)(($text_space_height - $total_text_height) * 0.3);
+    }
+
+    log_message("  Text positioned at: $start_y (black starts at: $black_region_start)\n");
 
     // Pure white text color for maximum contrast
     $text_color = imagecolorallocate($image, 255, 255, 255);

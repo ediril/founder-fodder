@@ -665,8 +665,7 @@ select:focus {
 }
 
 /* Override section opacity to preserve image colors for carousel */
-.carousel-wrapper ~ .section,
-.carousel-wrapper + .section {
+.section:has(.carousel-wrapper) {
     opacity: 1 !important;
 }
 

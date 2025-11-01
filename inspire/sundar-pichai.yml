@@ -1,0 +1,71 @@
+pages:
+  - text_0:
+      - "From a two-room Chennai flat to leading a $3.4 trillion empire."
+
+  - text_1:
+      - "Heat sticks to the concrete as a moped coughs through Ashok Nagar."
+      - "Four people, two rooms, no refrigerator; boys on a living-room floor listening to the water truck rumble down a dry street."
+      - "He counts phone numbers like prayer beads and dreams of circuits he’s never seen."
+
+  - text_2:
+      - "A single paper ticket—his father’s near year of wages—buys a first flight to California."
+      - "The air in San Francisco feels cold and possible; the Stanford labs glow like a new sun."
+      - "Everything is expensive; every call home costs dollars he doesn’t have."
+      - "So he trades comfort for code and keeps going."
+
+  - text_3:
+      - "Years later, under the hottest spotlight, Bard stumbles on day one."
+      - "Billions vanish in hours."
+      - "The world laughs, and the whispers sharpen: ‘Google lost it.’"
+
+  - text_4:
+      - "He’s been here before—when a no-name browser idea looked foolish against Internet Explorer."
+      - "Build anyway; ship faster; make speed the product and simplicity the weapon."
+      - "After the Bard bruise, he drags the teams into the furnace and hammers cadence: iterate, integrate, own the mistake, outlearn the room."
+      - "Defiance isn’t a speech—it’s the next release pushed before dawn."
+
+  - text_5:
+      - "Chrome lands quiet, then roars; tabs multiply like city lights at night."
+      - "Android spreads across continents, cheap enough to matter, powerful enough to stay."
+      - "Manufacturers sign, developers follow, and the web bends toward his bets."
+
+  - text_6:
+      - "2015: he takes the wheel at Google; the dashboard reads billions and rising."
+      - "Alphabet clears $350 billion in annual revenue by 2024 and cracks a $100+ billion quarter in 2025."
+      - "Android passes 3.5 billion users; Chrome owns the browser streets."
+      - "Investors blink and the valuation leaps past $3 trillion, then climbs higher."
+      - "Momentum stops being a story and becomes the operating system."
+
+  - text_7:
+      - "Today, he runs a company worth roughly $3.4 trillion with about 190,000 employees and $350 billion in yearly sales."
+      - "Chrome commands ~70%+ of global browsing; Android rides in billions of pockets."
+      - "His personal stake: a net worth around $1.4 billion."
+      - "He didn’t just win. He reset default."
+
+  - text_8:
+      - "Scrappy doesn’t disappear when you get resources; it just changes form."
+      - "Build through the heckling, learn in public, and make speed your apology."
+      - "Greatness is less thunderclap than drumbeat."
+
+images:
+    - "Sundar Pichai 1993 IIT Kharagpur"
+    - "Sundar Pichai 2008 Chrome launch"
+    - "Google I/O 2023 Bard demo"
+    - "Alphabet market cap 2025 milestone"
+    - "Android adoption 2025 global"
+    - "Chrome market share October 2025"
+
+references:
+  - "Forbes Profile: Sundar Pichai — https://www.forbes.com/profile/sundar-pichai/"
+  - "The Guardian (2017): Pichai’s two-room Chennai upbringing — https://www.theguardian.com/technology/2017/oct/07/google-boss-sundar-pichai-tax-gender-equality-data-protection-jemima-kiss"
+  - "NDTV (2020): ‘Father spent a year’s salary on my plane ticket’ — https://www.ndtv.com/people/google-ceo-sundar-pichai-dad-spent-a-years-salary-on-my-plane-ticket-to-us-2242898"
+  - "Reuters (Feb 8, 2023): Bard error wipes out ~$100B — https://www.reuters.com/technology/google-ai-chatbot-bard-offers-inaccurate-information-company-ad-2023-02-08/"
+  - "Investopedia (Feb 2023): Bard misfire and stock drop — https://www.investopedia.com/alphabet-chatbot-tanks-stock-microsoft-launches-own-ai-7107129"
+  - "Financial Times (Sept 2025): Alphabet tops $3T market value — https://www.ft.com/content/a18ce1c4-d610-4cdf-b853-2d8f43ff4be1"
+  - "Reuters (Sept 2025): Alphabet hits $3T market cap — https://www.reuters.com/business/alphabet-hits-3-trillion-market-capitalization-first-time-2025-09-15/"
+  - "Macrotrends: Alphabet revenue 2024 ($350B) — https://www.macrotrends.net/stocks/charts/GOOG/alphabet/revenue"
+  - "SEC Exhibit 99.1 (Q4 2024): $96.5B quarter — https://www.sec.gov/Archives/edgar/data/1652044/000165204425000010/googexhibit991q42024.htm"
+  - "SEC Exhibit 99.1 (Q3 2025): $102.3B quarter — https://www.sec.gov/Archives/edgar/data/1652044/000165204425000087/googexhibit991q32025.htm"
+  - "Statcounter: Global Browser Share (Oct 2025) — https://gs.statcounter.com/browser-market-share"
+  - "Business of Apps (2025): Android 3.5B+ active users — https://www.businessofapps.com/data/android-statistics/"
+  - "Macrotrends / CompaniesMarketCap: Alphabet market cap (Nov 2025 ≈ $3.4T) — https://www.macrotrends.net/stocks/charts/GOOGL/alphabet/market-cap"
