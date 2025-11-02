@@ -8,6 +8,7 @@ comment_summary_req/
 content/
 vendor/
 inspire/*/
+inspire/*.jpg
 
 .DS_Store
 *.db*

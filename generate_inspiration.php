@@ -179,6 +179,239 @@ function parse_inspiration_yml(string $file_path): array {
 }
 
 /**
+ * Search for person image on Wikipedia
+ *
+ * @param string $person_name Full name of the person
+ * @return string|null Wikipedia image URL or null if not found
+ */
+function search_wikipedia_image(string $person_name): ?string {
+    log_message("  Searching Wikipedia for: {$person_name}\n");
+
+    // First, search for the Wikipedia page
+    $search_url = "https://en.wikipedia.org/w/api.php?" . http_build_query([
+        'action' => 'query',
+        'list' => 'search',
+        'srsearch' => $person_name,
+        'format' => 'json',
+        'srlimit' => 1
+    ]);
+
+    $ch = curl_init($search_url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    curl_setopt($ch, CURLOPT_USERAGENT, 'FounderFodder/1.0 (https://founderfodder.com; contact@founderfodder.com)');
+
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    if (!$response) {
+        log_message("  Failed to search Wikipedia\n");
+        return null;
+    }
+
+    $data = json_decode($response, true);
+    if (empty($data['query']['search'])) {
+        log_message("  No Wikipedia page found\n");
+        return null;
+    }
+
+    $page_title = $data['query']['search'][0]['title'];
+    log_message("  Found Wikipedia page: {$page_title}\n");
+
+    // Get the page images
+    $image_url = "https://en.wikipedia.org/w/api.php?" . http_build_query([
+        'action' => 'query',
+        'titles' => $page_title,
+        'prop' => 'pageimages',
+        'format' => 'json',
+        'pithumbsize' => 500
+    ]);
+
+    $ch = curl_init($image_url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    curl_setopt($ch, CURLOPT_USERAGENT, 'FounderFodder/1.0 (https://founderfodder.com; contact@founderfodder.com)');
+
+    $response = curl_exec($ch);
+    curl_close($ch);
+
+    if (!$response) {
+        log_message("  Failed to get page images\n");
+        return null;
+    }
+
+    $data = json_decode($response, true);
+    $pages = $data['query']['pages'] ?? [];
+
+    foreach ($pages as $page) {
+        if (isset($page['thumbnail']['source'])) {
+            log_message("  Found image: {$page['thumbnail']['source']}\n");
+            return $page['thumbnail']['source'];
+        }
+    }
+
+    log_message("  No image found on Wikipedia page\n");
+    return null;
+}
+
+/**
+ * Crop image to square (centered)
+ *
+ * @param string $source_path Path to source image
+ * @param string $dest_path Path to save cropped image
+ * @return bool Success
+ */
+function crop_to_square(string $source_path, string $dest_path): bool {
+    // Get image info
+    $image_info = @getimagesize($source_path);
+    if ($image_info === false) {
+        log_message("  Failed to get image info\n");
+        return false;
+    }
+
+    $mime_type = $image_info['mime'];
+    $width = $image_info[0];
+    $height = $image_info[1];
+
+    // Load image based on type
+    switch ($mime_type) {
+        case 'image/jpeg':
+            $source = @imagecreatefromjpeg($source_path);
+            break;
+        case 'image/png':
+            $source = @imagecreatefrompng($source_path);
+            break;
+        case 'image/gif':
+            $source = @imagecreatefromgif($source_path);
+            break;
+        case 'image/webp':
+            $source = @imagecreatefromwebp($source_path);
+            break;
+        default:
+            log_message("  Unsupported image type: $mime_type\n");
+            return false;
+    }
+
+    if ($source === false) {
+        log_message("  Failed to load source image\n");
+        return false;
+    }
+
+    // Determine square size (use smaller dimension)
+    $square_size = min($width, $height);
+
+    // Calculate crop offset to center the crop
+    $offset_x = (int)(($width - $square_size) / 2);
+    $offset_y = (int)(($height - $square_size) / 2);
+
+    // Create square canvas
+    $square = imagecreatetruecolor($square_size, $square_size);
+
+    // Copy and crop
+    imagecopy(
+        $square,
+        $source,
+        0, 0,
+        $offset_x, $offset_y,
+        $square_size, $square_size
+    );
+
+    // Save as JPEG
+    $success = imagejpeg($square, $dest_path, 90);
+
+    // Clean up
+    imagedestroy($source);
+    imagedestroy($square);
+
+    return $success;
+}
+
+/**
+ * Download person profile image for list view
+ *
+ * @param string $story_name Story slug (e.g., "sara-blakely")
+ * @param string $base_dir Base directory path
+ * @return bool Success
+ */
+function download_person_image(string $story_name, string $base_dir): bool {
+    $image_path = "$base_dir/" . INSPIRATION_DIR . "/$story_name.jpg";
+
+    // Skip if image already exists
+    if (file_exists($image_path)) {
+        log_message("Person image already exists: $image_path\n");
+        return true;
+    }
+
+    log_message("Downloading person image for $story_name...\n");
+
+    // Convert slug to name for search
+    $person_name = ucwords(str_replace('-', ' ', $story_name));
+
+    $image_url = null;
+
+    // Try Wikipedia first
+    log_message("  Trying Wikipedia...\n");
+    $image_url = search_wikipedia_image($person_name);
+
+    // Fall back to Google Image search if Wikipedia fails
+    if (!$image_url) {
+        log_message("  Wikipedia failed, trying Google Image search...\n");
+        $search_phrases = [$person_name];
+        $image_urls = search_google_images($search_phrases, 10);
+
+        if (empty($image_urls)) {
+            log_message("Could not find person image for $story_name\n");
+            return false;
+        }
+
+        // Try downloading images until one succeeds
+        $temp_path = "$base_dir/" . INSPIRATION_DIR . "/$story_name.tmp.jpg";
+        $download_success = false;
+
+        foreach ($image_urls as $url) {
+            log_message("  Trying: $url\n");
+            if (download_image($url, $temp_path)) {
+                $image_url = $url;
+                $download_success = true;
+                break;
+            }
+        }
+
+        if (!$download_success) {
+            log_message("Could not download any image for $story_name\n");
+            return false;
+        }
+    } else {
+        // Download from Wikipedia
+        $temp_path = "$base_dir/" . INSPIRATION_DIR . "/$story_name.tmp.jpg";
+        if (!download_image($image_url, $temp_path)) {
+            log_message("Failed to download person image from Wikipedia\n");
+            return false;
+        }
+    }
+
+    // Crop to square
+    log_message("  Cropping to square...\n");
+    if (!crop_to_square($temp_path, $image_path)) {
+        log_message("  Failed to crop image\n");
+        @unlink($temp_path);
+        return false;
+    }
+
+    // Clean up temp file
+    @unlink($temp_path);
+
+    log_message("Successfully downloaded and cropped person image\n");
+    return true;
+}
+
+/**
  * Download image from URL
  *
  * @param string $url Image URL
@@ -956,7 +1189,18 @@ function generate_inspiration_story(string $story_name): array {
     }
 
     try {
+        // Download person profile image for list view (non-blocking)
+        log_message("\n");
+        log_message(str_repeat('=', 50) . "\n");
+        log_message("DOWNLOADING PERSON PROFILE IMAGE\n");
+        log_message(str_repeat('=', 50) . "\n");
+        download_person_image($story_name, $base_dir);
+
         // Parse the yml file
+        log_message("\n");
+        log_message(str_repeat('=', 50) . "\n");
+        log_message("PARSING STORY FILE\n");
+        log_message(str_repeat('=', 50) . "\n");
         log_message("Parsing $yml_file...\n");
         $parsed_data = parse_inspiration_yml($yml_file);
         $pages = $parsed_data['pages'];

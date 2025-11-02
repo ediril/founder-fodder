@@ -664,8 +664,9 @@ select:focus {
     touch-action: manipulation;
 }
 
-/* Override section opacity to preserve image colors for carousel */
-.section:has(.carousel-wrapper) {
+/* Override section opacity to preserve image colors for carousel and story lists */
+.section:has(.carousel-wrapper),
+.section:has(.story-list) {
     opacity: 1 !important;
 }
 

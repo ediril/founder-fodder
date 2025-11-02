@@ -38,6 +38,9 @@ php fetcher.php [--type=top|new|best|active --limit=50]
 
 # Generate AI summaries for fetched stories
 php summarizer.php [--type=top|new|best|active --limit=50]
+
+# Generate inspiration story images (includes person profile image download)
+php generate_inspiration.php <story-name>
 ```
 
 ### Deployment
