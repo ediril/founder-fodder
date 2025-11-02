@@ -111,8 +111,8 @@ function parse_inspiration_yml(string $file_path): array {
                     $text = preg_replace('/\\\\text\{([^}]+)\}/', '$1', $text); // Remove \text{...}
                     $text = str_replace('\\%', '%', $text); // Unescape \%
                     $text = str_replace('\\$', '$', $text); // Unescape \$
-                    // Replace em dashes with commas
-                    $text = str_replace(['—', '–'], ',', $text);
+                    // Replace em dashes, en dashes, and regular dashes with spaces
+                    $text = str_replace(['—', '–', '-'], ' ', $text);
                     // Remove trailing periods from each line
                     $text = preg_replace('/\.\s*$/m', '', $text);
                     $text = trim($text);
@@ -152,8 +152,8 @@ function parse_inspiration_yml(string $file_path): array {
                 $text = preg_replace('/\\\\text\{([^}]+)\}/', '$1', $text); // Remove \text{...}
                 $text = str_replace('\\%', '%', $text); // Unescape \%
                 $text = str_replace('\\$', '$', $text); // Unescape \$
-                // Replace em dashes with commas
-                $text = str_replace(['—', '–'], ',', $text);
+                // Replace em dashes, en dashes, and regular dashes with spaces
+                $text = str_replace(['—', '–', '-'], ' ', $text);
                 // Remove trailing periods from each line
                 $text = preg_replace('/\.\s*$/m', '', $text);
                 $pages[$page_num]['text'] = trim($text);

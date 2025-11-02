@@ -43,6 +43,8 @@ include __DIR__ . '/partials/hero.php';
                         // Extract first text block (text_0)
                         if (preg_match('/- text_0:\s*\n\s*-\s*"([^"]+)"/', $yml_content, $matches)) {
                             $excerpt = $matches[1];
+                            // Replace em dashes, en dashes, and regular dashes with spaces
+                            $excerpt = str_replace(['—', '–', '-'], ' ', $excerpt);
                             if (strlen($excerpt) > 200) {
                                 $excerpt = substr($excerpt, 0, 200) . '...';
                             }
