@@ -673,13 +673,14 @@ if ($path === '/' || $path === '/index.php') {
 
             $people[] = [
                 'name' => $name,
-                'slug' => $slug
+                'slug' => $slug,
+                'mtime' => filemtime($file)
             ];
         }
 
-        // Sort alphabetically by name
+        // Sort by modification time, most recent first
         usort($people, function($a, $b) {
-            return strcmp($a['name'], $b['name']);
+            return $b['mtime'] - $a['mtime'];
         });
     }
 
