@@ -59,7 +59,7 @@ include __DIR__ . '/partials/hero.php';
                     <div class="story-actions">
                         <p>
                             <a class="button is-small mt-2"
-                                href="/<?php echo htmlspecialchars($person['slug']); ?>">Read Story</a>
+                                href="/<?php echo htmlspecialchars($person['slug']); ?>">Get Inspired</a>
                         </p>
                     </div>
                 </div>
