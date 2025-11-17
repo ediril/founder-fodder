@@ -331,9 +331,9 @@ function get_all_blog_posts(): array {
         }
     }
 
-    // Sort by date (oldest first)
+    // Sort by date (newest first)
     usort($posts, function($a, $b) {
-        return strcmp($a['date'], $b['date']);
+        return strcmp($b['date'], $a['date']);
     });
 
     return $posts;
