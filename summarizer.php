@@ -92,7 +92,7 @@ class StorySummarizer {
             
             // Initialize Gemini AI
             $this->client = Gemini::client($apiKey);
-            $this->model = $this->client->generativeModel(model: 'gemini-2.5-flash-lite-preview-06-17');
+            $this->model = $this->client->generativeModel(model: 'gemini-2.5-flash-lite-preview-09-2025');
         }
         
         // Create directories if they don't exist
