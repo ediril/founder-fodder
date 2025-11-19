@@ -708,7 +708,7 @@ class StorySummarizer {
             if (strlen($storyContent) < MIN_STORY_LENGTH_FOR_SUMMARY) {
                 echo "STORY: " . $storyContent . "\n";
                 logMessage("  Story is too short to summarize (length: " . strlen($storyContent) . ")\n");
-                file_put_contents($storySummaryFile, "Story is too short to summarize");
+                file_put_contents($storySummaryFile, $storyContent);
                 return;
             }
 
@@ -1040,4 +1040,3 @@ try {
     echo "ERROR: " . $e->getMessage() . "\n";
     exit(1);
 }
-
