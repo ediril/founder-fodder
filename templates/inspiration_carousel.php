@@ -104,7 +104,23 @@ function updateImage() {
     // During generation, show a placeholder or nothing
     imageElement.style.visibility = 'hidden';
     <?php else: ?>
-    imageElement.src = `/inspire/${storyName}/page_${currentPage}.jpg`;
+    // Add cache busting parameter based on file modification time
+    const cacheBuster = '<?php
+        // Get latest mtime from all page images for cache busting
+        $story_dir = __DIR__ . "/../inspire/" . $story_name;
+        $latest_mtime = 0;
+        if (is_dir($story_dir)) {
+            $page_files = glob($story_dir . "/page_*.jpg");
+            foreach ($page_files as $file) {
+                $mtime = filemtime($file);
+                if ($mtime > $latest_mtime) {
+                    $latest_mtime = $mtime;
+                }
+            }
+        }
+        echo $latest_mtime;
+    ?>';
+    imageElement.src = `/inspire/${storyName}/page_${currentPage}.jpg?v=${cacheBuster}`;
     imageElement.style.visibility = 'visible';
     <?php endif; ?>
 

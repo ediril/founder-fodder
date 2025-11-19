@@ -18,8 +18,11 @@ include __DIR__ . '/partials/hero.php';
                     <?php
                     $image_path = "inspire/{$person['slug']}.jpg";
                     if (file_exists($image_path)):
+                        // Add cache busting parameter based on file modification time
+                        $image_version = filemtime($image_path);
+                        $image_url = "/" . $image_path . "?v=" . $image_version;
                     ?>
-                    <img src="/<?php echo htmlspecialchars($image_path); ?>"
+                    <img src="<?php echo htmlspecialchars($image_url); ?>"
                         alt="<?php echo htmlspecialchars($person['name']); ?>"
                         onerror="this.style.display='none'; this.parentNode.innerHTML = '<div class=\'image-placeholder\'><i class=\'fa-solid fa-lightbulb\'></i></div>';">
                     <?php else: ?>
