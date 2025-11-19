@@ -80,6 +80,7 @@ Apply the template below EXACTLY to “Steve Ells"
    - 2–4 sentences per page, alternating counts for rhythm.  
    - Never use the same sentence count for more than two consecutive pages.  
    - Limit one long sentence per page (to heighten emotion).  
+   - Max 12–15 words per sentence, except for the one ‘long emotional line’ allowed on each page.
    - Keep verbs active; avoid filler or passive phrasing.
 
 6. **Validation**
@@ -98,6 +99,7 @@ Apply the template below EXACTLY to “Steve Ells"
    - The reader should finish feeling moved, not just informed.  
 
 9. **Output Format**
+Please return it in a code block using the following format:
 
 ```yaml
 pages:
