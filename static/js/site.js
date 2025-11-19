@@ -234,6 +234,17 @@ class CommentSummarizationManager {
                 this.handleSummarizeClick(button);
             });
         }
+
+        // Check if there's a pending request on page load - start polling
+        const loadingDiv = document.getElementById('summary-loading');
+        if (loadingDiv && !loadingDiv.classList.contains('is-hidden')) {
+            const storyIdMatch = window.location.pathname.match(/\/summary\/(\d+)/);
+            if (storyIdMatch) {
+                const storyId = storyIdMatch[1];
+                console.log('Pending request detected on page load, starting polling for story', storyId);
+                this.startPolling(storyId);
+            }
+        }
     }
 
     async handleSummarizeClick(button) {
@@ -264,6 +275,12 @@ class CommentSummarizationManager {
 
             const result = await response.json();
 
+            // Log debug information
+            console.log('Summarizer response:', result);
+            if (result.debug) {
+                console.log('Debug info:', result.debug);
+            }
+
             if (response.status === 429) {
                 // Server-side rate limiting
                 const remainingTime = result.remaining_seconds || 15;
@@ -273,10 +290,26 @@ class CommentSummarizationManager {
             }
 
             if (result.success) {
-                // Start polling to check when summary is ready
+                console.log('Summarizer started in background');
+
+                // Show queued message and start polling
+                this.showQueuedMessage();
                 this.startPolling(storyId);
             } else {
-                this.showError(result.error || 'Failed to start summary generation');
+                console.error('Summarizer failed:', result.error);
+                if (result.debug) {
+                    console.error('Exit code:', result.debug.exit_code);
+                    console.error('STDOUT:', result.debug.stdout);
+                    console.error('STDERR:', result.debug.stderr);
+                }
+
+                // Show detailed error to user
+                let errorMessage = result.error || 'Failed to start summary generation';
+                if (result.debug && result.debug.stderr) {
+                    errorMessage += '\n\nDetails: ' + result.debug.stderr;
+                }
+
+                this.showError(errorMessage);
                 this.showButton(); // Show button again on error
             }
         } catch (error) {
@@ -364,6 +397,34 @@ class CommentSummarizationManager {
         }
     }
 
+    showQueuedMessage() {
+        // Hide button
+        const button = document.getElementById('summarize-comments-btn');
+        if (button) {
+            button.style.display = 'none';
+        }
+
+        // Hide loading spinner
+        this.hideLoading();
+
+        // Hide any errors
+        this.hideError();
+
+        // Show queued message with clock icon
+        const loadingDiv = document.getElementById('summary-loading');
+        if (loadingDiv) {
+            loadingDiv.innerHTML = `
+                <div class="notification is-info">
+                    <span class="icon">
+                        <i class="fa-solid fa-clock"></i>
+                    </span>
+                    <p>Your request is queued and will be processed shortly.</p>
+                </div>
+            `;
+            loadingDiv.classList.remove('is-hidden');
+        }
+    }
+
     showToast(message, type = 'info') {
         // Create toast notification using Bulma notification classes
         const toast = document.createElement('div');
@@ -408,12 +469,14 @@ class CommentSummarizationManager {
         // Store polling state
         this.pollStoryId = storyId;
         this.pollAttempts = 0;
-        this.maxPollAttempts = 5;
+        this.maxPollAttempts = 20;
+        this.consecutiveErrors = 0;
+        this.maxConsecutiveErrors = 5;
 
         // Start the polling
         this.pollInterval = setInterval(() => {
             this.checkSummaryStatus(storyId);
-        }, 3000);
+        }, 3000); // Poll every 3 seconds
     }
 
     async checkSummaryStatus(storyId) {
@@ -424,32 +487,65 @@ class CommentSummarizationManager {
             const response = await fetch(`/summary/${storyId}`);
             const html = await response.text();
 
-            // If the page contains a comment summary (has markdown-body in comments section)
-            // and no longer shows the "Summarize Comments" button, then it's ready
-            const hasCommentSummary = html.includes('Comments Summary') &&
-                                    html.includes('markdown-body') &&
-                                    !html.includes('summarize-comments-btn');
+            // Reset error counter on successful fetch
+            this.consecutiveErrors = 0;
+
+            // Check if summary is ready by looking for actual summary content
+            // We need to be more specific - check if markdown-body appears AFTER "Comments Summary"
+            // This prevents false positives from story summary's markdown-body
+            const commentsHeadingIndex = html.indexOf('Comments Summary');
+            const hasCommentSummaryHeading = commentsHeadingIndex !== -1;
+
+            // Look for markdown-body only AFTER the Comments Summary heading
+            let hasMarkdownContent = false;
+            if (hasCommentSummaryHeading) {
+                const htmlAfterCommentsHeading = html.substring(commentsHeadingIndex);
+                hasMarkdownContent = htmlAfterCommentsHeading.includes('markdown-body');
+            }
+
+            const hasButton = html.includes('summarize-comments-btn');
+            const hasQueuedState = html.includes('Your request is queued');
+
+            // Summary is ready when we have the heading, content, and NO button/queued state
+            const hasCommentSummary = hasCommentSummaryHeading &&
+                                    hasMarkdownContent &&
+                                    !hasButton &&
+                                    !hasQueuedState;
 
             if (hasCommentSummary) {
                 // Summary is ready!
+                console.log('✓ Comment summary detected as ready, stopping polling and reloading...');
                 this.stopPolling();
+                this.hideLoading();
                 this.showToast('Comment summary is ready! Refreshing page...', 'success');
+
+                // Force reload with cache bypass
                 setTimeout(() => {
-                    window.location.reload();
+                    console.log('Reloading page now...');
+                    window.location.reload(true);
                 }, 1000);
                 return;
             }
 
             // Check if we've exceeded max attempts
             if (this.pollAttempts >= this.maxPollAttempts) {
+                console.log('Polling timeout reached - summary still processing');
                 this.stopPolling();
-                this.showToast('Summary is taking longer than expected. Please refresh the page manually.', 'warning');
-                this.showButton(); // Show button again
+                // Keep the queued message showing - don't show button or toast
                 return;
             }
         } catch (error) {
             console.error('Error checking summary status:', error);
-            // Continue polling on error, don't stop
+            this.consecutiveErrors++;
+
+            // Stop polling if we have too many consecutive errors
+            if (this.consecutiveErrors >= this.maxConsecutiveErrors) {
+                this.stopPolling();
+                this.hideLoading();
+                this.showError('Failed to check summary status. Please try again later.');
+                return;
+            }
+            // Otherwise continue polling
         }
     }
 

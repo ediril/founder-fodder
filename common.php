@@ -5,7 +5,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 use Symfony\Component\Yaml\Yaml;
 
 const FETCHER_VERSION = "0.1029.001";
-const SUMMARIZER_VERSION = "0.1118.002";
+const SUMMARIZER_VERSION = "0.1118.003";
 
 const MAX_COMMENTS_TO_FETCH = 2500;
 const MAX_FETCH = 200;                  // 20 pages worth
@@ -32,7 +32,7 @@ const STORY_TYPES = [
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
 
 function acquireLock(string $lockName) {
-    $lockFile = __DIR__ . '/' . $lockName;       
+    $lockFile = __DIR__ . '/' . $lockName;
     $lockHandle = fopen($lockFile, 'c');
     if (!$lockHandle) {
         logMessage("Cannot create lock file: {$lockFile}");
@@ -42,7 +42,7 @@ function acquireLock(string $lockName) {
     // Try to get an exclusive lock
     if (!flock($lockHandle, LOCK_EX | LOCK_NB)) {
         fclose($lockHandle);
-        logMessage("Another instance of FETCH is already running");
+        logMessage("Another instance is already running (lock: {$lockName})");
         exit(1);
     }
 
@@ -133,7 +133,7 @@ function close_db_connection(?PDO $conn): void {
 
 function exit_if_other_process_running(string $lockName, int $timeout = 60 * 2): void {
     if (file_exists(__DIR__ . '/' . $lockName)) {
-        logMessage("Another instance of FETCH is already running");
+        logMessage("Another instance is already running (lock: {$lockName})");
         exit(0); // Exit successfully since this is expected behavior
     }
 }

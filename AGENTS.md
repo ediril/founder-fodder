@@ -2,13 +2,14 @@
 - When you need to implement something new or change existing behavior, check with me first before changing anything
 - Don't implement any backwards compatibility unless explicitly told to do so
 - Don't implement any fallback unless explicitly told to do so
-- When asked a question, just answer it. Do NOT make any changes
+- When asked a question, just answer it. Do NOT make any changes. If changes are required, confirm the plan first.
 - If you don't understand something or instructions aren't clear enough, make sure to ask follow up questions
-- Make the smallest possible change that will satisfy the request
-- Don't just add code, also look for opportunities to refactor, simplify, delete code to satisfy the request
-- Don't commit to git. You are allowed to read past commits.
+- When you are applying your solution to satisfy the request, make targeted changes no bigger than necessary. Smaller diffs are better.
+- Don't just consider adding code to satisfy the request; also look for opportunities to refactor, simplify, delete code
+- Don't commit to git. You are only allowed to read from git.
 - Don't touch TODO.md
 - When asked to change database schema, update it both in code and also in the database itself. Don't do migration though unless explicitly asked to do it. Just update the database in place. If rows could be deleted, make a backup of the database first.
 - Always test your changes, make sure they work as expected and did not break any previous functionality.
 - Implement exactly what is asked. If there is ambiguity in the request and you'll need to implement something in addition, first ask to confirm.
 - Prefer iteration and modularization over code duplication.
+- Don't return values from methods just for debugging or tests.

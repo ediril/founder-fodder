@@ -90,8 +90,19 @@ class StorySummarizer {
                 throw new Exception('GEMINI_API_KEY environment variable not found');
             }
             
-            // Initialize Gemini AI
-            $this->client = Gemini::client($apiKey);
+            // Initialize Gemini AI with extended timeout for large payloads
+            // Create HTTP client with 120s timeout for large comment summarization
+            $httpClient = new \Symfony\Component\HttpClient\Psr18Client(
+                new \Symfony\Component\HttpClient\CurlHttpClient([
+                    'timeout' => 120,
+                    'max_duration' => 120,
+                ])
+            );
+
+            $this->client = Gemini::factory()
+                ->withApiKey($apiKey)
+                ->withHttpClient($httpClient)
+                ->make();
             $this->model = $this->client->generativeModel(model: 'gemini-2.5-flash-lite-preview-09-2025');
         }
         
@@ -649,35 +660,49 @@ class StorySummarizer {
             } else { // comments
                 $prompt = str_replace('{content}', $content, COMMENTS_PROMPT);
             }
-            
+
+            $contentLength = strlen($content);
+            $promptLength = strlen($prompt);
+
             if ($this->dryRun) {
-                $contentLength = strlen($content);
-                $promptLength = strlen($prompt);
                 echo "    [DRY-RUN] Would summarize {$promptType} content ({$contentLength} chars, prompt: {$promptLength} chars)\n";
                 return "DRY-RUN MODE: This would be a {$promptType} summary generated from {$contentLength} characters of content.";
             }
-            
             $result = $this->model->generateContent($prompt);
             return $result->text();
 
         } catch (ValueError $e) {
             // Check if this is the specific quota/candidate issue
             if (strpos($e->getMessage(), 'quick accessor only works for a single candidate') !== false) {
-                echo "ERROR: Gemini API quota exhausted or no candidates returned.\n";
-                echo "Message: " . $e->getMessage() . "\n";
-                echo "This indicates API quota limits have been reached.\n";
-                echo "Exiting gracefully to avoid further quota usage.\n";
-                
+                logMessage("ERROR: Gemini API quota exhausted or no candidates returned");
+                logMessage("Message: " . $e->getMessage());
+                logMessage("This indicates API quota limits have been reached");
+                logMessage("Exiting gracefully to avoid further quota usage");
+
                 // Release resources and exit gracefully
                 $this->releaseResources();
                 exit(1);
             }
-            
+
             // Re-throw if it's a different ValueError
             throw $e;
-            
+
+        } catch (\Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface $e) {
+            logMessage("ERROR: Connection/timeout during {$promptType} summarization");
+            logMessage("Message: " . $e->getMessage());
+            logMessage("Content size: {$contentLength} chars");
+            return null;
+
+        } catch (\Symfony\Contracts\HttpClient\Exception\HttpExceptionInterface $e) {
+            logMessage("ERROR: HTTP request failed during {$promptType} summarization");
+            logMessage("Message: " . $e->getMessage());
+            logMessage("HTTP Status: " . $e->getResponse()->getStatusCode());
+            return null;
+
         } catch (Exception $e) {
-            echo "ERROR during summarization: " . $e->getMessage() . "\n";
+            logMessage("ERROR during {$promptType} summarization: " . $e->getMessage());
+            logMessage("Content size: {$contentLength} chars");
+            logMessage("Exception type: " . get_class($e));
             return null;
         }
     }
@@ -835,12 +860,6 @@ class StorySummarizer {
                     // Save the comments summary
                     file_put_contents($commentsSummaryFile, $commentsSummary);
                     echo "  Saved {$story['comments_count']} comments summary\n";
-
-                    // Clean up request file if it exists (user-initiated request completed)
-                    if (file_exists($requestFile)) {
-                        unlink($requestFile);
-                        echo "  Cleaned up request file\n";
-                    }
                 }
 
                 // Calculate and display elapsed time
@@ -852,10 +871,101 @@ class StorySummarizer {
                 }
             }
         }
-        
+
+        // ALWAYS clean up request file at the end, regardless of success/failure
+        // This ensures the frontend doesn't get stuck in "queued" state
+        if (file_exists($requestFile)) {
+            unlink($requestFile);
+            logMessage("  Cleaned up request file");
+        }
+
         // Clean up memory
         unset($commentsContent);
         gc_collect_cycles();
+    }
+
+    /**
+     * Process queued comment summary requests (up to a limit)
+     */
+    public function processQueuedCommentRequests($maxRequests = 3) {
+        $requestDir = __DIR__ . "/comment_summary_req";
+
+        if (!is_dir($requestDir)) {
+            return;
+        }
+
+        // Get all request files, sorted by modification time (oldest first - FIFO)
+        $requestFiles = glob($requestDir . "/*.txt");
+        if (empty($requestFiles)) {
+            return;
+        }
+
+        // Sort by file modification time (oldest first)
+        usort($requestFiles, function($a, $b) {
+            return filemtime($a) - filemtime($b);
+        });
+
+        $processedCount = 0;
+        logMessage("Found " . count($requestFiles) . " queued comment summary requests");
+        logMessage("Processing up to {$maxRequests} queued requests...");
+
+        foreach ($requestFiles as $requestFile) {
+            if ($processedCount >= $maxRequests) {
+                logMessage("Reached limit of {$maxRequests} queued requests for this run");
+                break;
+            }
+
+            // Extract story ID from filename
+            $filename = basename($requestFile, '.txt');
+            if (!is_numeric($filename)) {
+                continue;
+            }
+
+            $storyId = (int)$filename;
+
+            try {
+                // Fetch story from database
+                $stmt = $this->pdo->prepare('
+                    SELECT s.id, s.title, s.url, s.domain, s.comments_url, s.comments_count, s.fetched_at,
+                           GROUP_CONCAT(r.type) AS types
+                    FROM stories s
+                    LEFT JOIN ranks r ON s.id = r.id
+                    WHERE s.id = ?
+                    GROUP BY s.id
+                ');
+                $stmt->execute([$storyId]);
+                $story = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$story) {
+                    logMessage("  Story ID {$storyId} not found in database - removing request file");
+                    unlink($requestFile);
+                    continue;
+                }
+
+                logMessage("Processing queued request for story {$storyId}: {$story['title']}");
+
+                // Process comments (will handle the request file cleanup)
+                $this->processComments($story, $story['types'] ?? 0, false);
+
+                $processedCount++;
+
+            } catch (Exception $e) {
+                logMessage("Error processing queued request for story {$storyId}: " . $e->getMessage());
+
+                // Clean up request file on error to prevent getting stuck
+                if (file_exists($requestFile)) {
+                    unlink($requestFile);
+                    logMessage("  Cleaned up request file after error");
+                }
+            }
+
+            // Sleep between requests to be nice to APIs
+            if ($processedCount < $maxRequests) {
+                sleep(2);
+            }
+        }
+
+        logMessage("Processed {$processedCount} queued comment summary requests");
     }
 
     /**
@@ -1019,7 +1129,7 @@ try {
         if ($storyType === 'all') {
             // Process all story types with the limit applying to each type
             $types = array_keys(STORY_TYPES);
-            
+
             foreach ($types as $type) {
                 logMessage("=== Processing {$type} stories ===");
                 $summarizer->run($type, $limit, $downloadOnly);
@@ -1028,6 +1138,13 @@ try {
         } else {
             // Process single story type
             $summarizer->run($storyType, $limit, $downloadOnly);
+        }
+
+        // Process queued comment summary requests (limit to 3 per run)
+        if (!$downloadOnly) {
+            logMessage("=== Processing queued comment summary requests ===");
+            $summarizer->processQueuedCommentRequests(3);
+            logMessage("=== Completed processing queued requests ===");
         }
 
         // Clean up artifacts older than the retention period

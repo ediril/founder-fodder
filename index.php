@@ -516,52 +516,38 @@ if ($path === '/' || $path === '/index.php') {
             throw new Exception('Failed to create request file');
         }
 
-        // Trigger summarizer in background using proc_open for security
-        $descriptorspec = [
-            0 => ["pipe", "r"],  // stdin
-            1 => ["pipe", "w"],  // stdout
-            2 => ["pipe", "w"]   // stderr
-        ];
+        // Trigger summarizer in TRUE background (fire and forget)
+        // Use CLI PHP binary (not the web server handler like lsphp)
+        $php_binary = '/usr/local/bin/php';
 
-        $process = proc_open(
-            [PHP_BINARY, __DIR__ . '/summarizer.php', '--id=' . $story_id],
-            $descriptorspec,
-            $pipes,
-            __DIR__
-        );
+        $summarizer_path = __DIR__ . '/summarizer.php';
 
-        $return_var = 0;
-        if (is_resource($process)) {
-            // Close stdin
-            fclose($pipes[0]);
+        // Create a temporary log file for debugging production issues
+        $log_file = __DIR__ . "/logs/summarizer_{$story_id}.log";
+        if (!is_dir(__DIR__ . '/logs')) {
+            @mkdir(__DIR__ . '/logs', 0755, true);
+        }
 
-            // Read stdout and stderr
-            $stdout = stream_get_contents($pipes[1]);
-            $stderr = stream_get_contents($pipes[2]);
-            fclose($pipes[1]);
-            fclose($pipes[2]);
-
-            // Get the exit code
-            $return_var = proc_close($process);
+        // Spawn in background - log output for debugging
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            // Windows: use START command
+            $command = "start /B " . escapeshellarg($php_binary) . " " . escapeshellarg($summarizer_path) . " --id={$story_id} > " . escapeshellarg($log_file) . " 2>&1";
+            pclose(popen($command, 'r'));
+            $return_var = 0; // Assume success on Windows
         } else {
-            $return_var = -1;
+            // Unix/Linux/Mac: use nohup and & to detach
+            $command = "nohup " . escapeshellarg($php_binary) . " " . escapeshellarg($summarizer_path) . " --id={$story_id} > " . escapeshellarg($log_file) . " 2>&1 &";
+            exec($command, $output, $return_var);
         }
 
         header('Content-Type: application/json');
 
-        if ($return_var !== 0) {
-            // Log the error server-side only
-            error_log("Summarizer command failed (exit code: $return_var)");
-            echo json_encode([
-                'success' => false,
-                'error' => 'Summarizer failed to start'
-            ]);
-        } else {
-            echo json_encode([
-                'success' => true,
-                'message' => 'Request submitted successfully'
-            ]);
-        }
+        // Since we spawned in background, we can't detect lock conflicts immediately
+        // Just return success and let polling detect when it's done
+        echo json_encode([
+            'success' => true,
+            'message' => 'Summarization started in background'
+        ]);
 
     } catch (Exception $e) {
         // Clean up request file if it was created
@@ -599,9 +585,18 @@ if ($path === '/' || $path === '/index.php') {
     // Check if summary files exist
     $story_summary_file = "static/content/{$story_id}-story-summary.md";
     $comments_summary_file = "static/content/{$story_id}-comments-summary.md";
-    
+    $request_file = __DIR__ . "/comment_summary_req/{$story_id}.txt";
+
     $has_story_summary = file_exists($story_summary_file);
     $has_comments_summary = file_exists($comments_summary_file);
+    $has_pending_request = file_exists($request_file);
+
+    // If summary already exists but request file is still there, clean it up
+    if ($has_comments_summary && $has_pending_request) {
+        unlink($request_file);
+        $has_pending_request = false;
+        error_log("Cleaned up stale request file for story {$story_id} - summary already exists");
+    }
     
     if (!$has_story_summary && !$has_comments_summary) {
         http_response_code(404);

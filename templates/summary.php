@@ -120,20 +120,33 @@ include __DIR__ . '/partials/head.php';
                             <?php if ($story['comments_count'] > 10): ?>
                                 <div id="comments-summary-container" class="has-text-centered">
                                     <br><br>
-                                    <button id="summarize-comments-btn" class="button is-primary" data-story-id="<?php echo $story['id']; ?>">
-                                        <span class="icon">
-                                            <i class="fa-solid fa-magic-wand-sparkles"></i>
-                                        </span>
-                                        <span>Summarize Comments</span>
-                                    </button>
-                                    <div id="summary-loading" class="is-hidden mt-4">
-                                        <div class="notification is-info">
-                                            <span class="icon">
-                                                <i class="fa-solid fa-spinner fa-spin"></i>
-                                            </span>
-                                            Generating comment summary... This may take a moment.
+                                    <?php if ($has_pending_request): ?>
+                                        <!-- Show queued state with clock icon -->
+                                        <div id="summary-loading">
+                                            <div class="notification is-info">
+                                                <span class="icon">
+                                                    <i class="fa-solid fa-clock"></i>
+                                                </span>
+                                                <p>Your request is queued and will be processed shortly.</p>
+                                            </div>
                                         </div>
-                                    </div>
+                                    <?php else: ?>
+                                        <!-- Show button for new requests -->
+                                        <button id="summarize-comments-btn" class="button is-primary" data-story-id="<?php echo $story['id']; ?>">
+                                            <span class="icon">
+                                                <i class="fa-solid fa-magic-wand-sparkles"></i>
+                                            </span>
+                                            <span>Summarize Comments</span>
+                                        </button>
+                                        <div id="summary-loading" class="is-hidden mt-4">
+                                            <div class="notification is-info">
+                                                <span class="icon">
+                                                    <i class="fa-solid fa-spinner fa-spin"></i>
+                                                </span>
+                                                <p>Generating comment summary... This may take a moment.</p>
+                                            </div>
+                                        </div>
+                                    <?php endif; ?>
                                     <div id="summary-error" class="is-hidden mt-4">
                                         <div class="notification is-danger">
                                             <span id="error-message"></span>
