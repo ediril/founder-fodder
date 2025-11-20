@@ -12,9 +12,12 @@
                 <a href="/legal">Legal</a> • 
                 <a href="/privacy">Privacy</a>
             </p>
-            <p class="mb-2"><a href="https://emrahdiril.com">🌘 Emrah Diril</a> &copy; 2025. All Rights Reserved.</p>
-            <a href="https://startupfa.me/s/founder-fodder?utm_source=founderfodder.com" target="_blank"><img src="https://startupfa.me/badges/featured/default-small-rounded.webp" alt="Founder Fodder - Featured on Startup Fame" width="240" height="37" /></a>
+            <div style="display: inline-flex; align-items: center; gap: 10px; margin-bottom: 0.5rem;">
+                <a href="https://startupfa.me/s/founder-fodder?utm_source=founderfodder.com" target="_blank"><img src="https://startupfa.me/badges/featured/default-small-rounded.webp" alt="Founder Fodder - Featured on Startup Fame" style="height: 40px; width: auto; display: block;" /></a>
+                <a href="https://wired.business" target="_blank"><img src="https://wired.business/badge0-white.svg" alt="Featured on Wired Business" style="height: 40px; width: auto; display: block;"></a>
 
+            </div>
+            <p class="mb-2"><a href="https://emrahdiril.com">🌘 Emrah Diril</a> &copy; 2025. All Rights Reserved.</p>
         </div>
     </footer>
 
