@@ -12,7 +12,7 @@
                 <a href="/legal">Legal</a> • 
                 <a href="/privacy">Privacy</a>
             </p>
-            <p class="mb-2"><a href="https://emrahdiril.com">Emrah Diril</a> &copy; 2025 ✨❤️</p>
+            <p class="mb-2"><a href="https://emrahdiril.com">🌘 Emrah Diril</a> &copy; 2025. All Rights Reserved.</p>
             <a href="https://startupfa.me/s/founder-fodder?utm_source=founderfodder.com" target="_blank"><img src="https://startupfa.me/badges/featured/default-small-rounded.webp" alt="Founder Fodder - Featured on Startup Fame" width="240" height="37" /></a>
 
         </div>
