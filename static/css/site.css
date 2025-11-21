@@ -801,3 +801,44 @@ select:focus {
     transform: translateY(-1px);
   }
 }
+
+/* ================================
+   ADJACENT STORIES
+   ================================ */
+.adjacent-story-link {
+  display: block;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.adjacent-story-link:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+}
+
+.adjacent-story-link .box {
+  transition: all 0.2s ease;
+}
+
+.adjacent-story-link:hover .box {
+  transform: none; /* Prevent double transform */
+  box-shadow: none; /* Parent handles shadow */
+}
+
+.adjacent-story-image {
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+}
+
+.adjacent-story-link:hover .adjacent-story-image {
+  transform: scale(1.05);
+}
+
+/* Dark mode text override for adjacent stories */
+[data-theme="dark"] .adjacent-story-link .has-text-dark,
+:root:not([data-theme="light"]) .adjacent-story-link .has-text-dark {
+  color: var(--text-primary) !important;
+}

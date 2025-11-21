@@ -832,6 +832,62 @@ if ($path === '/' || $path === '/index.php') {
             }
         }
 
+        // Get adjacent stories for "Have you read these other stories?" section
+        $adjacent_stories = [];
+        $inspiration_dir = __DIR__ . '/inspire';
+        if (is_dir($inspiration_dir)) {
+            $files = glob($inspiration_dir . '/*.yml');
+            $all_stories = [];
+            foreach ($files as $file) {
+                $slug = basename($file, '.yml');
+                $all_stories[] = [
+                    'slug' => $slug,
+                    'name' => ucwords(str_replace('-', ' ', $slug)),
+                    'mtime' => filemtime($file)
+                ];
+            }
+
+            // Sort by modification time, most recent first (same as list view)
+            usort($all_stories, function($a, $b) {
+                return $b['mtime'] - $a['mtime'];
+            });
+
+            // Find current story's position
+            $current_index = -1;
+            foreach ($all_stories as $index => $story) {
+                if ($story['slug'] === $story_name) {
+                    $current_index = $index;
+                    break;
+                }
+            }
+
+            // Determine adjacent stories
+            if ($current_index !== -1 && count($all_stories) > 1) {
+                $has_before = $current_index > 0;
+                $has_after = $current_index < count($all_stories) - 1;
+
+                if ($has_before && $has_after) {
+                    // Prefer: one before, one after
+                    $adjacent_stories[] = $all_stories[$current_index - 1];
+                    $adjacent_stories[] = $all_stories[$current_index + 1];
+                } elseif (!$has_after && $current_index >= 2) {
+                    // No after: 2 before
+                    $adjacent_stories[] = $all_stories[$current_index - 2];
+                    $adjacent_stories[] = $all_stories[$current_index - 1];
+                } elseif (!$has_after && $current_index >= 1) {
+                    // Only 1 before available
+                    $adjacent_stories[] = $all_stories[$current_index - 1];
+                } elseif (!$has_before && $current_index + 2 < count($all_stories)) {
+                    // No before: 2 after
+                    $adjacent_stories[] = $all_stories[$current_index + 1];
+                    $adjacent_stories[] = $all_stories[$current_index + 2];
+                } elseif (!$has_before && $current_index + 1 < count($all_stories)) {
+                    // Only 1 after available
+                    $adjacent_stories[] = $all_stories[$current_index + 1];
+                }
+            }
+        }
+
         // Inspiration section - set active tab
         $active_tab = 'inspiration';
 

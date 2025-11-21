@@ -64,6 +64,42 @@ include __DIR__ . '/partials/hero.php';
         </div>
         <?php endif; ?>
 
+        <?php if (!empty($adjacent_stories)): ?>
+        <div class="box mt-5">
+            <h3 class="title is-5">Have you read these other stories?</h3>
+            <div class="content">
+                <div class="columns is-mobile">
+                    <?php foreach ($adjacent_stories as $adjacent): ?>
+                    <div class="column">
+                        <a href="/<?php echo htmlspecialchars($adjacent['slug']); ?>" class="adjacent-story-link box has-text-centered">
+                            <div style="margin-bottom: 1rem;">
+                                <?php
+                                $image_path = "inspire/{$adjacent['slug']}.jpg";
+                                if (file_exists($image_path)):
+                                    $image_version = filemtime($image_path);
+                                    $image_url = "/" . $image_path . "?v=" . $image_version;
+                                ?>
+                                <figure class="image is-128x128" style="margin: 0 auto;">
+                                    <img src="<?php echo htmlspecialchars($image_url); ?>"
+                                        alt="<?php echo htmlspecialchars($adjacent['name']); ?>"
+                                        class="adjacent-story-image"
+                                        onerror="this.style.display='none'; this.parentNode.innerHTML = '<div style=\'width: 128px; height: 128px; border-radius: 50%; background: #f5f5f5; display: flex; align-items: center; justify-content: center; margin: 0 auto;\'><i class=\'fa-solid fa-lightbulb fa-3x has-text-grey-light\'></i></div>';">
+                                </figure>
+                                <?php else: ?>
+                                <div style="width: 128px; height: 128px; border-radius: 50%; background: #f5f5f5; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                                    <i class="fa-solid fa-lightbulb fa-3x has-text-grey-light"></i>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                            <p class="has-text-weight-semibold has-text-dark"><?php echo htmlspecialchars($adjacent['name']); ?></p>
+                        </a>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <?php if (!empty($references)): ?>
         <div class="box mt-5">
             <h3 class="title is-5">References</h3>
