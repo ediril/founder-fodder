@@ -66,7 +66,7 @@ include __DIR__ . '/partials/hero.php';
 
         <?php if (!empty($adjacent_stories)): ?>
         <div class="box mt-5">
-            <h3 class="title is-5">Have you read these other stories?</h3>
+            <h3 class="title is-5">Did you read these stories?</h3>
             <div class="content">
                 <div class="columns is-mobile">
                     <?php foreach ($adjacent_stories as $adjacent): ?>

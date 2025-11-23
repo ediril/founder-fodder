@@ -1,7 +1,6 @@
 ✅ Top-Tier: Highest SEO & Story Leverage
 These are the names that can realistically bring traffic, have proven search volume, and give you strong founder-centric story arcs.
 Steve Jobs — massive demand; you can still win on long-tail angles; mandatory pillar content
-Mark Cuban — huge awareness, startup-focused audience loves him
 J. K. Rowling — rags-to-riches narrative; enormous global reach
 Ralph Lauren — iconic brand builder with a classic bootstrap story
 George Lucas — widely recognizable; independent creator → empire builder
