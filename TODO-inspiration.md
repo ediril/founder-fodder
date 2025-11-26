@@ -8,7 +8,6 @@ John Paul DeJoria — textbook “from homeless to billionaire” story; founder
 Debbi Fields — household brand + her story resonates hard with makers
 Conrad Hilton — legacy entrepreneur; historical but high search relevance
 Jessica Alba — celebrity crossover → startup founder; still strong traffic
-Kendra Scott — skyrocketed in popularity, strong entrepreneurial arc
 
 🔥 Top-Tier Additions (High Search Volume + Great Stories + Founder Appeal)
 1. Andrew Carnegie
