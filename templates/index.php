@@ -93,7 +93,7 @@ include __DIR__ . '/partials/hero.php';
                             <div class="story-actions">
                             <?php if (str_contains($excerpt, 'Story content not detected') || empty($excerpt)): ?>
                                 <a href="<?php echo htmlspecialchars($story['comments_url']); ?>" class="button is-small">
-                                    <span>Comments</span>
+                                    <span>Comments (<?php echo $story['comments_count']; ?>)</span>
                                 </a>
                             <?php else: ?>
                                 <?php if (!str_contains($excerpt, 'Story is too short to summarize')): ?>

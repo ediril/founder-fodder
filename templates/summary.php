@@ -101,7 +101,7 @@ include __DIR__ . '/partials/head.php';
                         <span class="icon has-text-primary"><i class="fa-regular fa-comments"></i></span>
                         Comments Summary
                         <a class="is-size-5" href="<?php echo htmlspecialchars($story['comments_url']); ?>">
-                            <i class="fa-solid fa-external-link pl-2"></i> Comments
+                            <i class="fa-solid fa-external-link pl-2"></i> Comments (<?php echo $story['comments_count']; ?>)
                         </a>
                     </h2>
                     <?php if ($has_comments_summary): ?>
