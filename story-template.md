@@ -54,12 +54,13 @@ Apply the template below EXACTLY to “Steve Ells"
        - Momentum, transformation, scaling the dream.  
        - Combine emotion + data: products launched, adoption, reach.  
        - Page 5 = 3 sentences (momentum starts)  
-       - Page 6 = 5 sentences (momentum explodes)  
+       - Page 6 = 4 sentences (momentum explodes)  
 
    - **Page 7 (The Proof):**  
-       - The present success — tangible results, metrics, legacy.  
+       - The present success — tangible results, metrics, legacy. 
+       - Max 12 words per sentence (punchline may use up to 15).
        - Use concrete facts: net worth, company value, reach, employees, impact.  
-       - 4 sentences total, one of which lands like a punch.  
+       - 4 sentences max, one of which lands like a punch.  
        - Example: “He didn’t just win. He rewired the world.”  
 
    - **Page 8 (The Takeaway):**  
