@@ -929,32 +929,57 @@ function overlay_text_on_image(string $image_path, string $text, string $output_
 
     $width = $target_width;
     $height = $target_height;
+    $visible_height = $new_height; // Actual image height on the canvas
 
     // Enable alpha blending for gradient overlay
     imagealphablending($image, true);
 
-    // Apply black gradient - more aggressive for better text readability
-    // With taller image (4:5 ratio), balance between showing image and text space
-    // - 35% to 50%: fade from 100% transparent to 100% opaque (stronger gradient)
-    // - 50% to 100%: stay 100% opaque black
-    // This gives more room for text with a more visible gradient
-    $gradient_start = (int)($height * 0.35); // Start gradient at 35%
-    $gradient_full_opacity = (int)($height * 0.50); // Full opacity by 50%
+    // Apply black gradient for text readability with a single smooth fade.
+    // Requirements:
+    // - Keep full image visible (no cropping)
+    // - Adapt based on where the image ends
+    // - Be fully black by ~65% of the carousel height for strong text contrast
+    if ($visible_height <= 0) {
+        $visible_height = $height;
+    }
+
+    // For short images, base the gradient on the image height.
+    // For taller images, limit the "gentle" part to the top half of the canvas.
+    $top_region = min($visible_height, (int)($height * 0.5));
+    $gradient_start = (int)($top_region * 0.25); // start around 25% into that region
+
+    // Y position where we are fully black:
+    // - For tall images: at ~65% of the canvas height
+    // - For short images: at the bottom of the image (so the fade is over the image,
+    //   then solid black continues in the padding)
+    $full_black_y = (int)min($visible_height, (int)($height * 0.65));
+    if ($full_black_y <= $gradient_start) {
+        $full_black_y = $gradient_start + 1;
+    }
+
+    $fade_length = max(1, $full_black_y - $gradient_start);
 
     for ($y = $gradient_start; $y < $height; $y++) {
-        if ($y >= $gradient_full_opacity) {
-            // 100% opaque black from here to bottom (applies to padding too)
+        if ($y >= $full_black_y) {
+            // Fully black from here to bottom
             $overlay_color = imagecolorallocate($image, 0, 0, 0);
             imagefilledrectangle($image, 0, $y, $width, $height, $overlay_color);
             break;
-        } else {
-            // Fade from transparent to opaque across full width
-            $progress = ($y - $gradient_start) / ($gradient_full_opacity - $gradient_start);
-            $alpha = (int)(127 * (1 - $progress)); // 127 (transparent) to 0 (opaque)
-
-            $overlay_color = imagecolorallocatealpha($image, 0, 0, 0, $alpha);
-            imagefilledrectangle($image, 0, $y, $width, $y, $overlay_color);
         }
+
+        // Single smooth fade from transparent to black
+        $progress = ($y - $gradient_start) / $fade_length;
+        if ($progress < 0) {
+            $progress = 0;
+        } elseif ($progress > 1) {
+            $progress = 1;
+        }
+
+        // Alpha: 127 (fully transparent) -> 0 (fully opaque black)
+        $alpha = (int)(127 * (1 - $progress));
+
+        $overlay_color = imagecolorallocatealpha($image, 0, 0, 0, $alpha);
+        imagefilledrectangle($image, 0, $y, $width, $y, $overlay_color);
     }
 
     // Text styling - Clean, bold, Instagram-style
