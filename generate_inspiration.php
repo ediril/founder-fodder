@@ -871,6 +871,9 @@ function overlay_text_on_image(string $image_path, string $text, string $output_
         case 'image/webp':
             $source = imagecreatefromwebp($image_path);
             break;
+        case 'image/gif':
+          $source = imagecreatefromgif($image_path);
+          break;
         default:
             log_message("  Image Error: Unsupported image type: $mime_type\n");
             return false;
