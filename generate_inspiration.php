@@ -105,8 +105,8 @@ function parse_inspiration_yml(string $file_path): array {
                     } else {
                         $text = trim($value);
                     }
-                    // Remove contentReference patterns from Claude Code
-                    $text = preg_replace('/:contentReference\[.*?\]\{.*?\}/', '', $text);
+                    // Remove contentReference patterns from Claude / OAICite (with or without {...} suffix)
+                    $text = preg_replace('/:contentReference\[.*?\](\{.*?\})?/', '', $text);
                     // Remove LaTeX formatting: \text{...}, \%, etc.
                     $text = preg_replace('/\\\\text\{([^}]+)\}/', '$1', $text); // Remove \text{...}
                     $text = str_replace('\\%', '%', $text); // Unescape \%
@@ -145,8 +145,8 @@ function parse_inspiration_yml(string $file_path): array {
                 } else {
                     $text = trim($value);
                 }
-                // Remove contentReference patterns from Claude Code
-                $text = preg_replace('/:contentReference\[.*?\]\{.*?\}/', '', $text);
+                // Remove contentReference patterns from Claude / OAICite (with or without {...} suffix)
+                $text = preg_replace('/:contentReference\[.*?\](\{.*?\})?/', '', $text);
                 // Remove LaTeX formatting: $...$, \text{...}, \%, etc.
                 $text = preg_replace('/\$([^$]+)\$/', '$1', $text); // Remove $ delimiters
                 $text = preg_replace('/\\\\text\{([^}]+)\}/', '$1', $text); // Remove \text{...}
