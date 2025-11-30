@@ -7,7 +7,6 @@ George Lucas — widely recognizable; independent creator → empire builder
 John Paul DeJoria — textbook “from homeless to billionaire” story; founders eat this up
 Debbi Fields — household brand + her story resonates hard with makers
 Conrad Hilton — legacy entrepreneur; historical but high search relevance
-Jessica Alba — celebrity crossover → startup founder; still strong traffic
 
 🔥 Top-Tier Additions (High Search Volume + Great Stories + Founder Appeal)
 1. Andrew Carnegie
