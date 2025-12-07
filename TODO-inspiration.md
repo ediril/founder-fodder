@@ -24,7 +24,6 @@ Verified massive search volume, strong founder narratives, broad audience appeal
 ## ⚡ High-Value Modern Founders
 Verified strong search interest, contemporary relevance, relatable to today's entrepreneurs.
 
-1. **Brian Chesky** (Airbnb) — Cereal-selling hustle story is legendary
 2. **Whitney Wolfe Herd** (Bumble) — 9,900+ monthly UK searches; harassment → IPO
 3. **Melanie Perkins** (Canva) — 100+ rejections → $40B company; fresh story
 4. **Evan Spiegel** (Snapchat) — Rejected $3B from Facebook; youngest billionaire at 25

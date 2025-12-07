@@ -1,0 +1,70 @@
+pages:
+  - text_0:
+      - "From maxed-out credit cards and airbeds to a $75 billion travel giant."
+
+  - text_1:
+      - "Niskayuna, New York, smelled like cold rinks, cafeteria fries, and his parents' worry.:contentReference[oaicite:1]{index=1}"
+      - "They were social workers, counting hours and paychecks, while their son sketched obsessively.:contentReference[oaicite:2]{index=2}"
+      - "Hockey gear piled beside sketchbooks, bonsai clippings, and bodybuilding trophies—a weird kid building worlds.:contentReference[oaicite:3]{index=3}"
+
+  - text_2:
+      - "Art school was the first rebellion.:contentReference[oaicite:4]{index=4}"
+      - "When he told his mom he’d attend RISD, she pictured a broke adult child.:contentReference[oaicite:5]{index=5}"
+      - "He promised a real job with health insurance and then walked straight into uncertainty.:contentReference[oaicite:6]{index=6}"
+      - "Years later, he quit the safe industrial-design gig, moved to San Francisco broke, and bet everything on a half-joke called air bed and breakfast, built on air mattresses and Pop-Tarts during a design conference."
+
+  - text_3:
+      - "Investors stared at their deck and saw lunacy, not lodging.:contentReference[oaicite:8]{index=8}"
+      - "Seven prominent angels rejected them; two didn’t even bother replying.:contentReference[oaicite:9]{index=9}"
+      - "Debt climbed toward $40,000, bookings crawled, and 'who would stay with strangers?' echoed everywhere."
+
+  - text_4:
+      - "So they did something absolutely ridiculous.:contentReference[oaicite:11]{index=11}"
+      - "In a cramped apartment, they hot-glued cereal boxes—Obama O’s and Cap’n McCains—like political origami."
+      - "They sold $40 boxes at conventions, turning $20,000 of desperation into $30,000 of lifeline cash and national press."
+      - "When Paul Graham saw the cereal box, he saw cockroach founders who simply wouldn’t die."
+
+  - text_5:
+      - "Y Combinator’s $20,000 check felt tiny on paper and enormous in their veins.:contentReference[oaicite:15]{index=15}"
+      - "They rewrote the site, photographed hosts’ homes themselves, slept on couches, and fixed every broken detail they could find."
+      - "Slowly, bookings ticked upward, city by city, as strangers decided to trust each other.:contentReference[oaicite:17]{index=17}"
+
+  - text_6:
+      - "By 2019, Airbnb felt less like a hack and more like a parallel hotel universe.:contentReference[oaicite:18]{index=18}"
+      - "Then Covid hit, revenue plunged about 80%, and he had to fire 1,900 people."
+      - "He sat on camera, voice cracking, explaining why travel as they knew it was over."
+      - "Instead of folding, he slashed distractions, refocused on hosts, and rebuilt around longer, local stays."
+
+  - text_7:
+      - "Today Airbnb generates nearly $12 billion in yearly revenue."
+      - "Its market value hovers near $75 billion on public markets.:contentReference[oaicite:23]{index=23}"
+      - "Chesky himself holds roughly 10% and a net worth around $9–9.2 billion."
+      - "Over 5 million hosts and 2 billion stays later, the airbed joke runs travel.:contentReference[oaicite:25]{index=25}"
+
+  - text_8:
+      - "His story says absurd, small experiments can outrun polished, reasonable plans."
+      - "You don’t need permission, just a way to stay in the game one more month.:contentReference[oaicite:27]{index=27}"
+      - "Keep building, keep iterating, and let the world laugh until it’s booking."
+
+images:
+  - "Brian Chesky 2004 RISD student"
+  - "Brian Chesky 2007 San Francisco air mattress apartment"
+  - "Brian Chesky Obama O's Cap'n McCains cereal boxes 2008"
+  - "Brian Chesky 2020 Covid crisis interview Airbnb layoffs"
+  - "Brian Chesky 2025 Airbnb founder mode M13"
+  - "Airbnb 2008 Airbed & Breakfast website"
+  - "Airbnb IPO 2020 trading floor opening"
+  - "Airbnb global hosts listings map 2025"
+
+references:
+  - "Brian Chesky - Wikipedia — https://en.wikipedia.org/wiki/Brian_Chesky"
+  - "Brian Chesky Net Worth | Celebrity Net Worth — https://www.celebritynetworth.com/richest-businessmen/ceos/brian-chesky-net-worth/"
+  - "Airbnb - About Us — https://news.airbnb.com/about-us/"
+  - "Airbnb Revenue 2018–2025 | Macrotrends — https://www.macrotrends.net/stocks/charts/ABNB/airbnb/revenue"
+  - "Airbnb (ABNB) Market Cap History — https://public.com/stocks/abnb/market-cap"
+  - "An Unbelievable Journey – Interview with Brian Chesky — https://www.startups.com/founder-interviews/brian-chesky"
+  - "Ep. 136: Airbnb CEO Brian Chesky – Clever Podcast — https://www.cleverpodcast.com/blog/ep-136-brian-chesky"
+  - "7 Rejections — Brian Chesky on Medium — https://medium.com/@bchesky/7-rejections-7d894cbaa084"
+  - "Obama O's and Cap'n McCain's Campaign – Growth Folks — https://growthfolks.club/p/obama-o-s-and-cap-n-mccain-s-campaign-by-airbnb"
+  - "How A Box Of Cereal And Acting Like A Cockroach Helped Airbnb — Business Insider summary — https://www.businessinsider.com/how-a-box-of-cereal-and-being-like-a-cockroach-helped-airbnb-become-a-billion-dollar-business-2013-3"
+  - "Brian Chesky on Managing Through Crisis and Uncertainty — Stanford GSB — https://www.gsb.stanford.edu/insights/brian-chesky-managing-through-crisis-uncertainty"
