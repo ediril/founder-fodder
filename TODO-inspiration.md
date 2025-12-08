@@ -17,7 +17,6 @@ Verified massive search volume, strong founder narratives, broad audience appeal
 12. **Ray Kroc** — Late-bloomer story; "never too late" case study
 13. **Howard Schultz** — From poverty → Starbucks empire
 14. **Colonel Sanders** — Late-life success; massive viral appeal
-15. **Mr. Beast (Jimmy Donaldson)** — Youngest creator billionaire; insane Gen Z traffic
 
 ---
 
