@@ -8,5 +8,4 @@ Disallow: /_originals/
 # Allow access to static assets
 Allow: /static/
 
-# Sitemap (add this when you have one)
-# Sitemap: https://yoursite.com/sitemap.xml 
+Sitemap: https://founderfodder.com/sitemap.xml 
