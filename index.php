@@ -832,6 +832,30 @@ if ($path === '/' || $path === '/index.php') {
             }
         }
 
+        // Generate proper display name from slug for SEO
+        $display_name = ucwords(str_replace('-', ' ', $story_name));
+
+        // Get first text block as meta description (the "hook" line)
+        $first_text = $story_text_blocks[0] ?? '';
+        $meta_description = $first_text;
+        if (strlen($meta_description) > 160) {
+            $meta_description = substr($meta_description, 0, 157) . '...';
+        }
+
+        // SEO variables for template
+        $page_title = "The {$display_name} Story - Founder Fodder";
+        $page_description = $meta_description;
+        $og_title = "The {$display_name} Story";
+        $og_description = $meta_description;
+        $og_type = 'article';
+
+        // Use founder's profile image as OG image
+        $profile_image = "/inspire/{$story_name}.jpg";
+        if (file_exists(__DIR__ . $profile_image)) {
+            $og_image = "https://founderfodder.com{$profile_image}";
+            $og_image_alt = $display_name;
+        }
+
         // Get adjacent stories for "Have you read these other stories?" section
         $adjacent_stories = [];
         $inspiration_dir = __DIR__ . '/inspire';

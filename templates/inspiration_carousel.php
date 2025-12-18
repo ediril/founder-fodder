@@ -1,13 +1,39 @@
 <?php
-$page_title = htmlspecialchars($story_name) . ' - Inspiration - Founder Fodder';
+// SEO variables ($page_title, $page_description, $og_title, $og_description, $og_image, $display_name)
+// are set in index.php before including this template
 include __DIR__ . '/partials/head.php';
-include __DIR__ . '/partials/hero.php';
 ?>
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "The <?php echo htmlspecialchars($display_name); ?> Story",
+    "description": <?php echo json_encode($page_description); ?>,
+    "image": <?php echo json_encode($og_image ?? 'https://founderfodder.com/founder-fodder-og.jpg'); ?>,
+    "author": {
+        "@type": "Organization",
+        "name": "Founder Fodder"
+    },
+    "publisher": {
+        "@type": "Organization",
+        "name": "Founder Fodder",
+        "logo": {
+            "@type": "ImageObject",
+            "url": "https://founderfodder.com/founder-fodder-og.jpg"
+        }
+    },
+    "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://founderfodder.com/<?php echo htmlspecialchars($story_name); ?>"
+    }
+}
+</script>
+<?php include __DIR__ . '/partials/hero.php'; ?>
 
 <section class="section pt-5 pb-0">
     <div class="container">
         <h1 class="title is-2 is-size-4-mobile has-text-centered">
-            The <?php echo htmlspecialchars(ucwords(str_replace('-', ' ', $story_name))); ?> Story
+            The <?php echo htmlspecialchars($display_name); ?> Story
         </h1>
     </div>
 </section>

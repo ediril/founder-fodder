@@ -1,5 +1,8 @@
 <?php
 $page_title = 'Inspiration - Founder Fodder';
+$page_description = 'Inspiring founder stories from entrepreneurs who built billion-dollar companies. Read how they overcame challenges and achieved success.';
+$og_title = 'Founder Inspiration Stories - Founder Fodder';
+$og_description = $page_description;
 include __DIR__ . '/partials/head.php';
 include __DIR__ . '/partials/hero.php';
 ?>
