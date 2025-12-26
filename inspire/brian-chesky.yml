@@ -1,70 +1,62 @@
 pages:
   - text_0:
-      - "From maxed-out credit cards and airbeds to a $75 billion travel giant."
+      - "From $20,000 credit-card debt to a ~$83B Airbnb—and a ~$9.2B founder stake."
 
   - text_1:
-      - "Niskayuna, New York, smelled like cold rinks, cafeteria fries, and his parents' worry.:contentReference[oaicite:1]{index=1}"
-      - "They were social workers, counting hours and paychecks, while their son sketched obsessively.:contentReference[oaicite:2]{index=2}"
-      - "Hockey gear piled beside sketchbooks, bonsai clippings, and bodybuilding trophies—a weird kid building worlds.:contentReference[oaicite:3]{index=3}"
+      - "Niskayuna felt quiet—suburbs, winter air, and a kid sketching escapes."
+      - "His parents were social workers; money was practical, not abundant."
+      - "Brian learned to redesign toys like problems begged to be redrawn."
 
   - text_2:
-      - "Art school was the first rebellion.:contentReference[oaicite:4]{index=4}"
-      - "When he told his mom he’d attend RISD, she pictured a broke adult child.:contentReference[oaicite:5]{index=5}"
-      - "He promised a real job with health insurance and then walked straight into uncertainty.:contentReference[oaicite:6]{index=6}"
-      - "Years later, he quit the safe industrial-design gig, moved to San Francisco broke, and bet everything on a half-joke called air bed and breakfast, built on air mattresses and Pop-Tarts during a design conference."
+      - "He chose art over the safer ladder, heading to RISD for industrial design."
+      - "In San Francisco years later, rent came due like a weekly threat."
+      - "A conference was in town, hotels were full, and their bank account wasn’t."
+      - "So they inflated air mattresses, sold floor space, and called it a company."
 
   - text_3:
-      - "Investors stared at their deck and saw lunacy, not lodging.:contentReference[oaicite:8]{index=8}"
-      - "Seven prominent angels rejected them; two didn’t even bother replying.:contentReference[oaicite:9]{index=9}"
-      - "Debt climbed toward $40,000, bookings crawled, and 'who would stay with strangers?' echoed everywhere."
+      - "Investors stared, then laughed: strangers won’t sleep in strangers’ homes."
+      - "Seven meetings, seven nos, two ghosts—$150k for 10% evaporated."
+      - "The idea sounded wrong, which meant it might be valuable."
 
   - text_4:
-      - "So they did something absolutely ridiculous.:contentReference[oaicite:11]{index=11}"
-      - "In a cramped apartment, they hot-glued cereal boxes—Obama O’s and Cap’n McCains—like political origami."
-      - "They sold $40 boxes at conventions, turning $20,000 of desperation into $30,000 of lifeline cash and national press."
-      - "When Paul Graham saw the cereal box, he saw cockroach founders who simply wouldn’t die."
+      - "They made cereal boxes—Obama O’s and Cap’n McCain’s—like a dare."
+      - "Hot glue, burned fingers, numbered “limited editions,” and $40 a box."
+      - "Contrarian belief: trust isn’t marketing; trust is product design."
+      - "They didn’t beg for belief—they shipped a story loud enough to get seen."
 
   - text_5:
-      - "Y Combinator’s $20,000 check felt tiny on paper and enormous in their veins.:contentReference[oaicite:15]{index=15}"
-      - "They rewrote the site, photographed hosts’ homes themselves, slept on couches, and fixed every broken detail they could find."
-      - "Slowly, bookings ticked upward, city by city, as strangers decided to trust each other.:contentReference[oaicite:17]{index=17}"
+      - "Y Combinator still mocked the concept, but respected the refusal to die."
+      - "Then they did the unscalable thing: fly to New York, shoot listing photos."
+      - "Revenue stopped flatlining, because the product finally looked believable."
 
   - text_6:
-      - "By 2019, Airbnb felt less like a hack and more like a parallel hotel universe.:contentReference[oaicite:18]{index=18}"
-      - "Then Covid hit, revenue plunged about 80%, and he had to fire 1,900 people."
-      - "He sat on camera, voice cracking, explaining why travel as they knew it was over."
-      - "Instead of folding, he slashed distractions, refocused on hosts, and rebuilt around longer, local stays."
+      - "The climb wasn’t “growth”; it was converting fear into a repeatable flow."
+      - "Design choices became systems: identity, reviews, photos, payments, support."
+      - "They stretched from rooms to homes, then to a global travel reflex."
+      - "By 2024, Airbnb reported $11.1B revenue and $2.6B net income."
 
   - text_7:
-      - "Today Airbnb generates nearly $12 billion in yearly revenue."
-      - "Its market value hovers near $75 billion on public markets.:contentReference[oaicite:23]{index=23}"
-      - "Chesky himself holds roughly 10% and a net worth around $9–9.2 billion."
-      - "Over 5 million hosts and 2 billion stays later, the airbed joke runs travel.:contentReference[oaicite:25]{index=25}"
+      - "Chesky’s estimated net worth sits around $9.2B."
+      - "Airbnb’s market cap is about $83B in late 2025."
+      - "Airbnb said it had about 7,300 employees at 2024 year-end."
+      - "He didn’t rent rooms—he industrialized trust."
 
   - text_8:
-      - "His story says absurd, small experiments can outrun polished, reasonable plans."
-      - "You don’t need permission, just a way to stay in the game one more month.:contentReference[oaicite:27]{index=27}"
-      - "Keep building, keep iterating, and let the world laugh until it’s booking."
+      - "This story proves that “impossible” markets are often just undesigned markets."
+      - "The lesson here isn’t charisma or timing; it’s building belief into the interface."
+      - "If users feel safe, conversion becomes a consequence, not a campaign."
 
 images:
-  - "Brian Chesky 2004 RISD student"
-  - "Brian Chesky 2007 San Francisco air mattress apartment"
-  - "Brian Chesky Obama O's Cap'n McCains cereal boxes 2008"
-  - "Brian Chesky 2020 Covid crisis interview Airbnb layoffs"
-  - "Brian Chesky 2025 Airbnb founder mode M13"
-  - "Airbnb 2008 Airbed & Breakfast website"
-  - "Airbnb IPO 2020 trading floor opening"
-  - "Airbnb global hosts listings map 2025"
+  - "Brian Chesky 2008 2010 2025"
+  - "Airbnb 2008 2009 2025"
+  - "Airbnb Obama O's Cap'n McCain's 2008"
+  - "Brian Chesky Y Combinator 2009"
+  - "Airbnb professional photography New York 2009"
 
 references:
-  - "Brian Chesky - Wikipedia — https://en.wikipedia.org/wiki/Brian_Chesky"
-  - "Brian Chesky Net Worth | Celebrity Net Worth — https://www.celebritynetworth.com/richest-businessmen/ceos/brian-chesky-net-worth/"
-  - "Airbnb - About Us — https://news.airbnb.com/about-us/"
-  - "Airbnb Revenue 2018–2025 | Macrotrends — https://www.macrotrends.net/stocks/charts/ABNB/airbnb/revenue"
-  - "Airbnb (ABNB) Market Cap History — https://public.com/stocks/abnb/market-cap"
-  - "An Unbelievable Journey – Interview with Brian Chesky — https://www.startups.com/founder-interviews/brian-chesky"
-  - "Ep. 136: Airbnb CEO Brian Chesky – Clever Podcast — https://www.cleverpodcast.com/blog/ep-136-brian-chesky"
-  - "7 Rejections — Brian Chesky on Medium — https://medium.com/@bchesky/7-rejections-7d894cbaa084"
-  - "Obama O's and Cap'n McCain's Campaign – Growth Folks — https://growthfolks.club/p/obama-o-s-and-cap-n-mccain-s-campaign-by-airbnb"
-  - "How A Box Of Cereal And Acting Like A Cockroach Helped Airbnb — Business Insider summary — https://www.businessinsider.com/how-a-box-of-cereal-and-being-like-a-cockroach-helped-airbnb-become-a-billion-dollar-business-2013-3"
-  - "Brian Chesky on Managing Through Crisis and Uncertainty — Stanford GSB — https://www.gsb.stanford.edu/insights/brian-chesky-managing-through-crisis-uncertainty"
+  - "Airbnb, Inc. Form 10-K (FY 2024) — SEC (abnb-20241231): https://www.sec.gov/Archives/edgar/data/1559720/000155972025000010/abnb-20241231.htm"
+  - "Airbnb (ABNB) quote — Market cap (as of Dec 24, 2025): https://finance.yahoo.com/quote/ABNB/"
+  - "Airbnb’s Surprising Path to Y Combinator — WIRED: https://www.wired.com/2017/02/airbnbs-surprising-path-to-y-combinator/"
+  - "7 Rejections — Brian Chesky (Medium): https://medium.com/@bchesky/7-rejections-7d894cbaa084"
+  - "How Design Thinking Transformed Airbnb from a Failing Startup to a Billion Dollar Business — First Round Review: https://review.firstround.com/how-design-thinking-transformed-airbnb-from-failing-startup-to-billion-dollar-business/"
+  - "Brian Chesky — Wikipedia (biographical background + net worth attribution): https://en.wikipedia.org/wiki/Brian_Chesky"
