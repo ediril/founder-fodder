@@ -1019,9 +1019,72 @@ class HackerNewsFetcher
             }
             
             echo "Cleanup complete. Removed {$removedCount} unused images.\n";
-            
+
         } catch (\Exception $e) {
             echo "Error during image cleanup: " . $e->getMessage() . "\n";
+        }
+    }
+
+    /**
+     * Remove orphan summary files from static/content that either:
+     * 1. Reference stories that no longer exist in the database
+     * 2. Reference stories that exist but are not in the ranks table (not displayed)
+     */
+    public function cleanupOrphanSummaries(): void {
+        echo "\nCleaning up orphan summary files...\n";
+
+        $contentDir = __DIR__ . '/static/content';
+
+        if (!is_dir($contentDir)) {
+            echo "Warning: Content directory {$contentDir} does not exist, skipping cleanup.\n";
+            return;
+        }
+
+        try {
+            // Get all story IDs that are currently ranked (displayed on the site)
+            $stmt = $this->pdo->query('SELECT DISTINCT id FROM ranks');
+            $rankedIds = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+            $rankedIdsMap = array_flip($rankedIds);
+
+            // Find all summary files
+            $summaryFiles = glob($contentDir . '/*-story-summary.md');
+            $commentFiles = glob($contentDir . '/*-comments-summary.md');
+
+            $removedCount = 0;
+            $orphanIds = [];
+
+            // Check story summary files
+            foreach ($summaryFiles as $file) {
+                if (preg_match('/(\d+)-story-summary\.md$/', basename($file), $matches)) {
+                    $storyId = (int)$matches[1];
+                    if (!isset($rankedIdsMap[$storyId])) {
+                        $orphanIds[$storyId] = true;
+                        if (unlink($file)) {
+                            echo "Removed orphan story summary: " . basename($file) . "\n";
+                            $removedCount++;
+                        }
+                    }
+                }
+            }
+
+            // Check comments summary files
+            foreach ($commentFiles as $file) {
+                if (preg_match('/(\d+)-comments-summary\.md$/', basename($file), $matches)) {
+                    $storyId = (int)$matches[1];
+                    if (!isset($rankedIdsMap[$storyId])) {
+                        $orphanIds[$storyId] = true;
+                        if (unlink($file)) {
+                            echo "Removed orphan comments summary: " . basename($file) . "\n";
+                            $removedCount++;
+                        }
+                    }
+                }
+            }
+
+            echo "Cleanup complete. Removed {$removedCount} orphan summary files for " . count($orphanIds) . " stories.\n";
+
+        } catch (\Exception $e) {
+            echo "Error during summary cleanup: " . $e->getMessage() . "\n";
         }
     }
 }
@@ -1096,7 +1159,12 @@ if (php_sapi_name() === 'cli' && realpath(__FILE__) === realpath($_SERVER['SCRIP
             $fetcher->fetchAndStore($type, $limit);
         }
 
-        // Clean up unused images after fetching
+        // Clean up unused images and orphan summaries after fetching
         $fetcher->cleanupUnusedImages();
+        $fetcher->cleanupOrphanSummaries();
+
+        // Regenerate sitemap
+        logMessage("Regenerating sitemap...");
+        require_once __DIR__ . '/generate_sitemap.php';
     }
 } 

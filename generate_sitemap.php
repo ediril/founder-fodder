@@ -39,7 +39,7 @@ function url_entry(string $loc, string $lastmod = '', string $changefreq = '', s
 }
 
 /**
- * Get stories that have summary files
+ * Get stories that have summary files AND are currently ranked (displayed on site)
  */
 function get_stories_with_summaries(): array {
     $stories = [];
@@ -49,6 +49,13 @@ function get_stories_with_summaries(): array {
         return $stories;
     }
 
+    // Get all ranked story IDs from database
+    $conn = get_db_connection();
+    $stmt = $conn->query('SELECT DISTINCT id FROM ranks');
+    $ranked_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    $ranked_ids_map = array_flip($ranked_ids);
+    close_db_connection($conn);
+
     // Find all story summary files
     $files = glob($content_dir . '/*-story-summary.md');
 
@@ -56,10 +63,13 @@ function get_stories_with_summaries(): array {
         $basename = basename($file);
         if (preg_match('/^(\d+)-story-summary\.md$/', $basename, $matches)) {
             $story_id = $matches[1];
-            $stories[] = [
-                'id' => $story_id,
-                'lastmod' => date('Y-m-d', filemtime($file))
-            ];
+            // Only include if story is currently ranked
+            if (isset($ranked_ids_map[$story_id])) {
+                $stories[] = [
+                    'id' => $story_id,
+                    'lastmod' => date('Y-m-d', filemtime($file))
+                ];
+            }
         }
     }
 
